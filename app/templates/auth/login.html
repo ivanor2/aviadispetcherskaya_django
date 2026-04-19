@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Вход в систему{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>🔐 Вход в АРМ Диспетчера</h1>
+            <p>Введите свои учётные данные</p>
+        </div>
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="alert alert-error">
+                Неверный логин или пароль
+            </div>
+            {% endif %}
+
+            {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+
+            <div class="form-group">
+                <label for="id_username">Имя пользователя:</label>
+                <input type="text"
+                       name="username"
+                       id="id_username"
+                       class="form-control"
+                       required
+                       autofocus
+                       placeholder="Введите имя пользователя">
+            </div>
+
+            <div class="form-group">
+                <label for="id_password">Пароль:</label>
+                <input type="password"
+                       name="password"
+                       id="id_password"
+                       class="form-control"
+                       required
+                       placeholder="Введите пароль">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg btn-block">
+                    Войти
+                </button>
+            </div>
+        </form>
+
+        <div class="auth-footer">
+            <p>Нет аккаунта? <a href="{% url 'app:register' %}">Зарегистрироваться</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

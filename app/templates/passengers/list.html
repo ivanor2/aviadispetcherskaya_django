@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Все пассажиры{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>👥 Пассажиры</h1>
+    <a href="#" class="btn btn-primary">➕ Зарегистрировать</a>
+</div>
+
+<!-- Форма поиска -->
+<form method="get" class="search-form">
+    <div class="search-row">
+        <div class="search-field">
+            <label for="search_type">Поиск:</label>
+            <select name="search_type" id="search_type" class="form-select">
+                <option value="passport">По паспорту</option>
+                <option value="name" {% if request.GET.search_type == 'name' %}selected{% endif %}>По ФИО</option>
+            </select>
+        </div>
+        <div class="search-field">
+            <label for="query">Запрос:</label>
+            <input type="text" name="query" id="query" class="form-control"
+                   placeholder="Введите паспорт или ФИО..."
+                   value="{{ request.GET.query|default:'' }}">
+        </div>
+        <div class="search-actions">
+            <button type="submit" class="btn btn-primary">🔍 Найти</button>
+            <a href="{% url 'app:passenger_list' %}" class="btn btn-secondary">✕ Сбросить</a>
+        </div>
+    </div>
+</form>
+
+<!-- Список пассажиров -->
+{% if passengers %}
+<div class="passengers-table-container">
+    <table class="passengers-table">
+        <thead>
+            <tr>
+                <th>ФИО</th>
+                <th>Паспорт</th>
+                <th>Дата рождения</th>
+                <th>Бронирования</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for passenger in passengers %}
+            <tr>
+                <td><strong>{{ passenger.full_name }}</strong></td>
+                <td>{{ passenger.passport_number }}</td>
+                <td>{{ passenger.birth_date|date:"d.m.Y" }}</td>
+                <td>
+                    {% if passenger.bookings_count %}
+                        <span class="badge">{{ passenger.bookings_count }}</span>
+                    {% else %}
+                        <span class="badge badge-empty">0</span>
+                    {% endif %}
+                </td>
+                <td class="actions-cell">
+                    <a href="#" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
+                    <a href="#" class="btn btn-sm btn-warning" title="Редактировать">✏️</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>Пассажиры не найдены</p>
+    <a href="#" class="btn btn-primary">➕ Зарегистрировать первого пассажира</a>
+</div>
+{% endif %}
+{% endblock %}

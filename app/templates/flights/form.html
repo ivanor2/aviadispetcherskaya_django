@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title|default:"Добавить рейс" }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>{{ title|default:"Новый авиарейс" }}</h2>
+
+    <form method="post" class="flight-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="form-grid">
+            <!-- Номер рейса -->
+            <div class="form-group">
+                <label for="{{ form.flight_number.id_for_label }}">
+                    № авиарейса <span class="required">*</span>
+                </label>
+                {{ form.flight_number }}
+                {% if form.flight_number.errors %}
+                    <small class="error">{{ form.flight_number.errors.0 }}</small>
+                {% endif %}
+                <small class="help-text">Формат: AAA-NNN (SVO-123)</small>
+            </div>
+
+            <!-- Авиакомпания -->
+            <div class="form-group">
+                <label for="{{ form.airline_name.id_for_label }}">
+                    Авиакомпания <span class="required">*</span>
+                </label>
+                {{ form.airline_name }}
+                {% if form.airline_name.errors %}
+                    <small class="error">{{ form.airline_name.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <!-- Аэропорты -->
+            <div class="form-group">
+                <label for="{{ form.departure_airport.id_for_label }}">
+                    Отправление <span class="required">*</span>
+                </label>
+                {{ form.departure_airport }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.arrival_airport.id_for_label }}">
+                    Прибытие <span class="required">*</span>
+                </label>
+                {{ form.arrival_airport }}
+            </div>
+
+            <!-- Дата и время -->
+            <div class="form-group">
+                <label for="{{ form.departure_date.id_for_label }}">
+                    Дата <span class="required">*</span>
+                </label>
+                {{ form.departure_date }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.departure_time.id_for_label }}">
+                    Время <span class="required">*</span>
+                </label>
+                {{ form.departure_time }}
+            </div>
+
+            <!-- Места -->
+            <div class="form-group">
+                <label for="{{ form.total_seats.id_for_label }}">
+                    Всего мест <span class="required">*</span>
+                </label>
+                {{ form.total_seats }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.free_seats.id_for_label }}">
+                    Свободных мест
+                </label>
+                {{ form.free_seats }}
+                <small class="help-text">Оставьте пустым для авто-заполнения</small>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+            <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">✕ Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

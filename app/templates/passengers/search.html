@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Поиск пассажира{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🔍 Поиск пассажира</h1>
+</div>
+
+<div class="search-page">
+    <form method="post" class="search-form-large">
+        {% csrf_token %}
+
+        <div class="search-type-selector">
+            <label>
+                <input type="radio" name="search_type" value="passport" checked>
+                <span>🪪 По паспорту</span>
+            </label>
+            <label>
+                <input type="radio" name="search_type" value="name">
+                <span>👤 По ФИО</span>
+            </label>
+        </div>
+
+        <div class="search-input-group">
+            <input type="text" name="query" class="form-control form-control-lg"
+                   placeholder="Введите номер паспорта (NNNN-NNNNNN) или ФИО..."
+                   required autocomplete="off">
+            <button type="submit" class="btn btn-primary btn-lg">🔍 Найти</button>
+        </div>
+
+        <small class="help-text">
+            📋 Формат паспорта: 4 цифры, дефис, 6 цифр (например: 1234-567890)
+        </small>
+    </form>
+
+    <!-- Результаты поиска (подгружаются после отправки) -->
+    {% if passenger %}
+    <div class="search-result">
+        <h3>✅ Пассажир найден</h3>
+        <div class="passenger-card">
+            <div class="passenger-header">
+                <h4>{{ passenger.full_name }}</h4>
+                <span class="passport-badge">{{ passenger.passport_number }}</span>
+            </div>
+            <div class="passenger-details">
+                <p><strong>🎂 Дата рождения:</strong> {{ passenger.birth_date|date:"d.m.Y" }}</p>
+                <p><strong>🪪 Выдан:</strong> {{ passenger.passport_issued_by }}</p>
+                <p><strong>📅 Дата выдачи:</strong> {{ passenger.passport_issue_date|date:"d.m.Y" }}</p>
+            </div>
+
+            {% if bookings %}
+            <div class="passenger-bookings">
+                <h4>🎫 Бронирования:</h4>
+                <ul class="bookings-list">
+                    {% for booking in bookings %}
+                    <li>
+                        <strong>{{ booking.booking_code }}</strong> —
+                        Рейс {{ booking.flight_number }}
+                        ({{ booking.departure_date|date:"d.m.Y" }})
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <p class="empty-state">У пассажира нет активных бронирований</p>
+            {% endif %}
+        </div>
+    </div>
+    {% elif request.POST %}
+    <div class="search-result error">
+        <p>❌ Пассажир не найден. Проверьте введённые данные.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

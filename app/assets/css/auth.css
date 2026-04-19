@@ -1,0 +1,129 @@
+/* app/assets/css/auth.css */
+
+/* Контейнер авторизации */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    padding: 2rem;
+}
+
+/* Карточка авторизации */
+.auth-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 3rem;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Заголовок */
+.auth-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-header h1 {
+    font-size: 2rem;
+    color: #1a1a2e;
+    margin-bottom: 0.5rem;
+}
+
+.auth-header p {
+    color: #666;
+    font-size: 1rem;
+}
+
+/* Форма */
+.auth-form {
+    margin-bottom: 2rem;
+}
+
+.auth-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.auth-form .form-actions {
+    margin-top: 2rem;
+    border-top: none;
+    padding-top: 0;
+}
+
+/* Подвал формы */
+.auth-footer {
+    text-align: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+    color: #666;
+}
+
+.auth-footer a {
+    color: #4fc3f7;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Информационный блок */
+.auth-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.auth-info h4 {
+    color: #333;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.auth-info ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.auth-info li {
+    padding: 0.5rem 0;
+    color: #666;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #eee;
+}
+
+.auth-info li:last-child {
+    border-bottom: none;
+}
+
+.auth-info strong {
+    color: #1a1a2e;
+}
+
+/* Помощь при входе */
+.auth-help {
+    text-align: center;
+    color: #666;
+    margin-top: 1.5rem;
+}
+
+.auth-help a {
+    color: #4fc3f7;
+    text-decoration: none;
+}
+
+/* Адаптивность */
+@media (max-width: 576px) {
+    .auth-card {
+        padding: 2rem 1.5rem;
+    }
+
+    .auth-header h1 {
+        font-size: 1.5rem;
+    }
+}

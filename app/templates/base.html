@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}АРМ Диспетчера Аэропорта{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/forms.css' %}">
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+    {% block extra_css %}{% endblock %}
+    <style>
+        /* Базовые стили */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f6fa; color: #333; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+
+        /* Навигация */
+        .navbar { background: #1a1a2e; color: #fff; padding: 1rem 0; }
+        .navbar .container { display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand { font-size: 1.5rem; font-weight: bold; text-decoration: none; color: #fff; }
+        .navbar-nav { display: flex; gap: 1.5rem; list-style: none; }
+        .navbar-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px; transition: background 0.2s; }
+        .navbar-nav a:hover { background: rgba(255,255,255,0.1); }
+        .navbar-nav a.active { background: #4fc3f7; }
+        .navbar-nav a.disabled { opacity: 0.5; pointer-events: none; }
+
+        /* User menu */
+        .user-menu { display: flex; align-items: center; gap: 1rem; }
+        .user-info { color: #aaa; font-size: 0.9rem; }
+        .user-role { background: #4fc3f7; color: #1a1a2e; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .btn-logout { background: #dc3545; color: #fff; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; font-size: 0.9rem; }
+
+        /* Контент */
+        .main-content { padding: 2rem 0; min-height: calc(100vh - 200px); }
+
+        /* Футер */
+        .main-footer { background: #1a1a2e; color: #aaa; padding: 1.5rem 0; margin-top: 2rem; }
+        .main-footer p { text-align: center; }
+
+        /* Сообщения */
+        .messages { margin-bottom: 1rem; }
+        .alert { padding: 1rem; border-radius: 6px; margin-bottom: 1rem; }
+        .alert-error { background: #ffebee; color: #c62828; border-left: 4px solid #dc3545; }
+        .alert-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
+        .alert-close { float: right; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+
+        /* Карточки */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+        .flight-card { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .flight-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .airline-badge { background: #4fc3f7; color: #1a1a2e; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+        .route { display: flex; justify-content: space-between; align-items: center; margin: 1rem 0; }
+        .airport { text-align: center; }
+        .airport-code { font-size: 1.5rem; font-weight: bold; display: block; }
+        .airport-name { font-size: 0.9rem; color: #666; }
+        .route-arrow { font-size: 1.5rem; }
+        .schedule { margin: 1rem 0; }
+        .schedule p { display: flex; align-items: center; gap: 0.5rem; }
+        .seats { margin: 1rem 0; }
+        .seats.sold-out { color: #dc3545; }
+        .flight-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+
+        /* Статистика */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+        .stat-card { background: #fff; border-radius: 12px; padding: 1.5rem; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #4fc3f7; }
+        .stat-label { color: #666; margin-top: 0.5rem; }
+
+        /* Быстрые действия */
+        .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+        .quick-action { background: #fff; border-radius: 8px; padding: 1rem; text-align: center; text-decoration: none; color: #333; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .quick-action:hover { transform: translateY(-2px); }
+        .quick-action-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+
+        /* Кнопки */
+        .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: background 0.2s; }
+        .btn-primary { background: #1a1a2e; color: #fff; }
+        .btn-primary:hover { background: #16213e; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-success { background: #4caf50; color: #fff; }
+        .btn-success:hover { background: #388e3c; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-danger:hover { background: #c62828; }
+        .btn-block { width: 100%; justify-content: center; }
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
+        .btn-lg { padding: 1rem 2rem; font-size: 1.125rem; }
+
+        /* Таблицы */
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; }
+        tr:hover { background: #f8f9fa; }
+
+        /* Формы */
+        .form-container { background: #fff; border-radius: 12px; padding: 2rem; margin: 2rem 0; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+        .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .form-group label { font-weight: 500; color: #333; }
+        .form-group .required { color: #dc3545; }
+        .form-group input, .form-group select, .form-group textarea { padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; transition: border-color 0.2s; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #4fc3f7; box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.1); }
+        .form-group .error { color: #dc3545; font-size: 0.875rem; }
+        .form-group .help-text { color: #666; font-size: 0.8rem; }
+        .form-actions { display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #eee; }
+
+        /* Ролевые элементы */
+        .role-restricted { display: none; }
+        .role-admin .role-admin-only { display: block !important; }
+        .role-dispatcher .role-dispatcher-only { display: block !important; }
+        .role-admin .role-guest-only, .role-dispatcher .role-guest-only { display: none !important; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 3rem; color: #666; }
+    </style>
+</head>
+<body class="{% if user_role %}role-{{ user_role }}{% endif %}">
+    <!-- Навигация -->
+    {% if is_authenticated %}
+    <nav class="navbar">
+        <div class="container">
+            <a href="{% url 'app:index' %}" class="navbar-brand">✈️ АвиаДиспетчер</a>
+
+            <ul class="navbar-nav">
+                <li><a href="{% url 'app:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">Главная</a></li>
+                <li><a href="{% url 'app:flight_list' %}" class="{% if 'flight' in request.resolver_match.url_name %}active{% endif %} {% if not can_manage_flights %}disabled{% endif %}">Рейсы</a></li>
+                <li><a href="{% url 'app:passenger_list' %}" class="{% if 'passenger' in request.resolver_match.url_name %}active{% endif %} {% if not can_manage_passengers %}disabled{% endif %}">Пассажиры</a></li>
+                <li class="role-admin-only"><a href="#">Аэропорты</a></li>
+                <li class="role-admin-only"><a href="#">Отчёты</a></li>
+            </ul>
+
+            <div class="user-menu">
+                <div class="user-info">
+                    {% if user_info %}
+                        <span>{{ user_info.username }}</span>
+                        <span class="user-role">{{ user_role|upper }}</span>
+                    {% endif %}
+                </div>
+                <a href="{% url 'app:logout' %}" class="btn-logout">🚪 Выход</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Сообщения -->
+    {% if messages %}
+    <div class="messages container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Основной контент -->
+    <main class="container main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Футер -->
+    {% if is_authenticated %}
+    <footer class="main-footer">
+        <div class="container">
+            <p>© 2026 АРМ Диспетчера Аэропорта | Курсовая работа | Рябинин И.С.</p>
+        </div>
+    </footer>
+    {% endif %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

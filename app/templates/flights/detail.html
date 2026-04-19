@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ flight.flight_number }} — Детали рейса{% endblock %}
+
+{% block content %}
+<!-- Хлебные крошки -->
+<nav class="breadcrumbs">
+    <a href="{% url 'app:index' %}">Главная</a> /
+    <a href="{% url 'app:flight_list' %}">Рейсы</a> /
+    <span>{{ flight.flight_number }}</span>
+</nav>
+
+<div class="flight-detail">
+    <!-- Заголовок рейса -->
+    <header class="flight-header">
+        <div class="flight-title">
+            <h1>{{ flight.flight_number }}</h1>
+            <span class="airline-name">{{ flight.airline_name }}</span>
+        </div>
+        <div class="flight-status {% if flight.free_seats == 0 %}sold-out{% elif flight.free_seats < 10 %}low-seats{% else %}available{% endif %}">
+            {% if flight.free_seats == 0 %}
+                <span class="status-badge">❌ Мест нет</span>
+            {% elif flight.free_seats < 10 %}
+                <span class="status-badge">⚠️ Осталось {{ flight.free_seats }} мест</span>
+            {% else %}
+                <span class="status-badge">✅ В продаже</span>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Информация о рейсе -->
+    <section class="flight-info-grid">
+        <div class="info-card">
+            <h3>🛫 Отправление</h3>
+            <p class="airport-code">{{ flight.departure_airport.icao_code }}</p>
+            <p class="airport-name">{{ flight.departure_airport.name }}</p>
+            <p class="airport-city">{{ flight.departure_airport.city }}, {{ flight.departure_airport.country }}</p>
+            <p class="datetime">
+                <strong>{{ flight.departure_date|date:"d.m.Y" }}</strong>
+                {{ flight.departure_time|time:"H:i" }}
+            </p>
+        </div>
+
+        <div class="route-connector">✈️</div>
+
+        <div class="info-card">
+            <h3>🛬 Прибытие</h3>
+            <p class="airport-code">{{ flight.arrival_airport.icao_code }}</p>
+            <p class="airport-name">{{ flight.arrival_airport.name }}</p>
+            <p class="airport-city">{{ flight.arrival_airport.city }}, {{ flight.arrival_airport.country }}</p>
+            <p class="datetime">
+                <strong>{{ flight.departure_date|date:"d.m.Y" }}</strong>
+                {% comment %} Здесь можно добавить расчет времени прибытия {% endcomment %}
+            </p>
+        </div>
+    </section>
+
+    <!-- Места и действия -->
+    <section class="flight-actions-section">
+        <div class="seats-info">
+            <h3>Доступность мест</h3>
+            <div class="seats-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {% widthratio flight.free_seats flight.total_seats 100 %}%"></div>
+                </div>
+                <span class="seats-count">{{ flight.free_seats }} из {{ flight.total_seats }} мест свободно</span>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            {% if flight.free_seats > 0 %}
+            <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-primary btn-lg">🎫 Продать билет</a>
+            {% endif %}
+            <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">← Назад к списку</a>
+        </div>
+    </section>
+
+    <!-- Пассажиры на рейсе -->
+    <section class="passengers-section">
+        <h3>👥 Пассажиры на рейсе ({{ passengers|length }})</h3>
+
+        {% if passengers %}
+        <div class="passengers-table-container">
+            <table class="passengers-table">
+                <thead>
+                    <tr>
+                        <th>Код бронирования</th>
+                        <th>ФИО пассажира</th>
+                        <th>Паспорт</th>
+                        <th>Дата бронирования</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in passengers %}
+                    <tr>
+                        <td><strong>{{ booking.booking_code }}</strong></td>
+                        <td>{{ booking.passenger.full_name }}</td>
+                        <td>{{ booking.passenger.passport_number }}</td>
+                        <td>{{ booking.booked_at|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            <form method="post" action="{% url 'app:booking_cancel' booking.id %}" onsubmit="return confirm('Отменить бронирование?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="flight_id" value="{{ flight.id }}">
+                                <button type="submit" class="btn btn-sm btn-danger">↩️ Возврат</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-state">На этот рейс ещё не куплено ни одного билета</p>
+        {% endif %}
+        <td>
+    {% if can_cancel_booking %}
+    <form method="post" action="{% url 'app:booking_cancel' booking.id %}" onsubmit="return confirm('Отменить бронирование?');">
+        {% csrf_token %}
+        <input type="hidden" name="flight_id" value="{{ flight.id }}">
+        <button type="submit" class="btn btn-sm btn-danger">↩️ Возврат</button>
+    </form>
+    {% else %}
+    <span class="text-muted">Только админ</span>
+    {% endif %}
+</td>
+    </section>
+
+</div>
+{% endblock %}

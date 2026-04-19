@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Все авиарейсы{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>✈️ Авиарейсы</h1>
+    <a href="{% url 'app:flight_create' %}" class="btn btn-primary">➕ Добавить рейс</a>
+</div>
+
+<!-- Форма поиска -->
+<form method="get" class="search-form">
+    {{ search_form.non_field_errors }}
+    <div class="search-row">
+        <div class="search-field">
+            <label for="{{ search_form.search_type.id_for_label }}">Поиск:</label>
+            {{ search_form.search_type }}
+        </div>
+        <div class="search-field">
+            <label for="{{ search_form.query.id_for_label }}">Запрос:</label>
+            {{ search_form.query }}
+            {% if search_form.query.errors %}
+                <small class="error">{{ search_form.query.errors.0 }}</small>
+            {% endif %}
+        </div>
+        <div class="search-actions">
+            <button type="submit" class="btn btn-primary">🔍 Найти</button>
+            <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">✕ Сбросить</a>
+        </div>
+    </div>
+</form>
+
+<!-- Список рейсов -->
+{% if flights %}
+<div class="flights-table-container">
+    <table class="flights-table">
+        <thead>
+            <tr>
+                <th>№ рейса</th>
+                <th>Авиакомпания</th>
+                <th>Маршрут</th>
+                <th>Дата и время</th>
+                <th>Места</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for flight in flights %}
+            <tr class="flight-row {% if flight.free_seats == 0 %}sold-out{% endif %}">
+                <td>
+                    <strong>{{ flight.flight_number }}</strong>
+                </td>
+                <td>{{ flight.airline_name }}</td>
+                <td>
+                    <span class="route-mini">
+                        {{ flight.departure_airport.icao_code }}
+                        <span class="arrow">→</span>
+                        {{ flight.arrival_airport.icao_code }}
+                    </span>
+                    <small class="route-cities">
+                        {{ flight.departure_airport.city }} — {{ flight.arrival_airport.city }}
+                    </small>
+                </td>
+                <td>
+                    {{ flight.departure_date|date:"d.m.Y" }}<br>
+                    <small>{{ flight.departure_time|time:"H:i" }}</small>
+                </td>
+                <td>
+                    <span class="seats-badge {% if flight.free_seats == 0 %}sold-out{% endif %}">
+                        {{ flight.free_seats }}/{{ flight.total_seats }}
+                    </span>
+                </td>
+                <td class="actions-cell">
+                    <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
+                    <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-sm btn-success" title="Продать билет" {% if flight.free_seats == 0 %}disabled{% endif %}>🎫</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Пагинация -->
+{% if is_paginated %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="pagination-link">« Первая</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="pagination-link">‹ Назад</a>
+    {% endif %}
+
+    <span class="pagination-info">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="pagination-link">Вперёд ›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="pagination-link">Последняя »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <p>Рейсы не найдены</p>
+    {% if search_form.query.value %}
+        <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">Показать все рейсы</a>
+    {% else %}
+        <a href="{% url 'app:flight_create' %}" class="btn btn-primary">➕ Добавить первый рейс</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

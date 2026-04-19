@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Главная — АРМ Диспетчера{% endblock %}
+{% block content %}
+<div class="dashboard">
+    <header class="dashboard-header">
+        <h1>🎛️ Панель управления аэропортом</h1>
+        <p>Управление авиарейсами, пассажирами и бронированиями</p>
+    </header>
+
+    <!-- Статистика -->
+    <section class="stats-section">
+        <h2>📈 Статистика</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_flights|default:0 }}</div>
+                <div class="stat-label">Всего рейсов</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ active_flights|default:0 }}</div>
+                <div class="stat-label">Активных рейсов</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_passengers|default:0 }}</div>
+                <div class="stat-label">Пассажиров</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_bookings|default:0 }}</div>
+                <div class="stat-label">Продано билетов</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Быстрые действия (ролевой доступ) -->
+    <section class="quick-actions-section">
+        <h2>⚡ Быстрые действия</h2>
+        <div class="quick-actions">
+            {% if can_manage_flights %}
+            <a href="{% url 'app:flight_create' %}" class="quick-action role-dispatcher-only role-admin-only">
+                <span class="quick-action-icon">➕</span>
+                <span>Добавить рейс</span>
+            </a>
+            {% endif %}
+
+            {% if can_manage_passengers %}
+            <a href="{% url 'app:passenger_search' %}" class="quick-action role-dispatcher-only role-admin-only">
+                <span class="quick-action-icon">🔍</span>
+                <span>Найти пассажира</span>
+            </a>
+            {% endif %}
+
+            <a href="{% url 'app:flight_list' %}" class="quick-action">
+                <span class="quick-action-icon">🔎</span>
+                <span>Поиск рейса</span>
+            </a>
+
+            {% if can_view_reports %}
+            <a href="#" class="quick-action role-dispatcher-only role-admin-only">
+                <span class="quick-action-icon">📊</span>
+                <span>Статистика</span>
+            </a>
+            {% endif %}
+
+            <a href="{% url 'app:passenger_list' %}" class="quick-action">
+                <span class="quick-action-icon">👥</span>
+                <span>Все пассажиры</span>
+            </a>
+
+            {% if can_manage_airports %}
+            <a href="#" class="quick-action role-admin-only">
+                <span class="quick-action-icon">🗂️</span>
+                <span>Управление аэропортами</span>
+            </a>
+            {% endif %}
+
+            {% if can_manage_users %}
+            <a href="#" class="quick-action role-admin-only">
+                <span class="quick-action-icon">👤</span>
+                <span>Пользователи</span>
+            </a>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Ближайшие рейсы -->
+    <section class="flights-section">
+        <div class="section-header">
+            <h2>✈️ Ближайшие рейсы</h2>
+            <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">Все рейсы →</a>
+        </div>
+
+        {% if recent_flights %}
+        <div class="cards-grid">
+            {% for flight in recent_flights %}
+            <article class="flight-card">
+                <header class="flight-card-header">
+                    <h3>{{ flight.flight_number }}</h3>
+                    <span class="airline-badge">{{ flight.airline_name }}</span>
+                </header>
+
+                <div class="route">
+                    <div class="airport">
+                        <span class="airport-code">{{ flight.departure_airport.icao_code }}</span>
+                        <span class="airport-name">{{ flight.departure_airport.city }}</span>
+                    </div>
+                    <span class="route-arrow">✈</span>
+                    <div class="airport">
+                        <span class="airport-code">{{ flight.arrival_airport.icao_code }}</span>
+                        <span class="airport-name">{{ flight.arrival_airport.city }}</span>
+                    </div>
+                </div>
+
+                <div class="schedule">
+                    <p><span class="icon">📅</span> {{ flight.departure_date|date:"d.m.Y" }}</p>
+                    <p><span class="icon">🕐</span> {{ flight.departure_time|time:"H:i" }}</p>
+                </div>
+
+                <div class="seats {% if flight.free_seats == 0 %}sold-out{% endif %}">
+                    <span class="seats-label">Мест: </span>
+                    <span class="seats-value">{{ flight.free_seats }}/{{ flight.total_seats }}</span>
+                </div>
+
+                <div class="flight-actions">
+                    <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-primary btn-sm">Подробнее</a>
+                    {% if flight.free_seats > 0 and can_manage_bookings %}
+                    <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-success btn-sm">🎫 Купить</a>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>Рейсы не найдены</p>
+            {% if can_manage_flights %}
+            <a href="{% url 'app:flight_create' %}" class="btn btn-primary">➕ Добавить рейс</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Информация о роли -->
+    <section class="role-info-section">
+        <div class="alert alert-success">
+            <strong>🔐 Ваша роль:</strong> {{ user_role|upper }}
+            {% if is_admin %}
+            | Полный доступ ко всем функциям системы
+            {% elif is_dispatcher %}
+            | Доступ к управлению рейсами, пассажирами и бронированиями
+            {% else %}
+            | Ограниченный доступ (только просмотр)
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}
