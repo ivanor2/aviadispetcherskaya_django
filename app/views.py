@@ -19,13 +19,21 @@ from app.forms import (
 # 🔧 Вспомогательные функции
 # ==========================================
 
+# app/views.py
+
 def _normalize_keys(data):
     """Рекурсивно преобразует camelCase ключи API в snake_case для шаблонов Django"""
     if isinstance(data, dict):
-        return {
-            re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower(): _normalize_keys(v)
-            for k, v in data.items()
-        }
+        result = {}
+        for k, v in data.items():
+            # ✅ Особая обработка для 'id' - гарантированно сохраняем
+            if k == 'id':
+                result['id'] = v
+            else:
+                # Конвертируем camelCase в snake_case: flightNumber → flight_number
+                snake_key = re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower()
+                result[snake_key] = _normalize_keys(v)
+        return result
     elif isinstance(data, list):
         return [_normalize_keys(item) for item in data]
     return data
@@ -56,7 +64,7 @@ def _fetch_airports_map(request):
     headers = _get_headers(request)
     try:
         # ✅ size=200 достаточно для аэропортов и не вызывает 422
-        resp = requests.get(f"{settings.API_BASE_URL}/airports", params={'page': 1, 'size': 200}, headers=headers, timeout=10)
+        resp = requests.get(f"{settings.API_BASE_URL}/airports", params={'page': 1, 'size': 100}, headers=headers, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             items = data.get('items', [])
@@ -224,6 +232,8 @@ class IndexView(TemplateView):
                 'total_bookings': total_bookings,
                 'recent_flights': recent_flights_enriched
             })
+
+
         except requests.RequestException:
             context.update({
                 'total_flights': 0, 'total_passengers': 0,
@@ -236,53 +246,81 @@ class IndexView(TemplateView):
 class FlightListView(TemplateView):
     template_name = 'flights/list.html'
 
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(_get_role_perms(self.request))
         page_num = self.request.GET.get('page', 1)
         search_form = FlightSearchForm(self.request.GET)
 
-        items = []
+        items, total = [], 0
         headers = _get_headers(self.request)
 
-        if search_form.is_valid():
-            stype = search_form.cleaned_data.get('search_type')
-            query = search_form.cleaned_data.get('query', '').strip()
-            try:
+        try:
+            if search_form.is_valid():
+                stype = search_form.cleaned_data.get('search_type')
+                query = search_form.cleaned_data.get('query', '').strip()
+
                 if stype == 'number' and query:
                     res = requests.get(f"{settings.API_BASE_URL}/flights/by-number/{query.upper()}", headers=headers,
                                        timeout=5)
+
                     if res.status_code == 200:
-                        items = [res.json()]
+                        json_data = res.json()
+                        flight_obj = json_data.get('flight')
+
+                        if flight_obj:
+                            items = [flight_obj]  # В список кладём только сам рейс
+                            total = 1
+                        else:
+                            items = []
+                            total = 0
+                            messages.warning(self.request, 'Рейс найден, но данные о нем пусты')
+
+                    elif res.status_code == 404:
+                        items, total = [], 0
+                        messages.warning(self.request, 'Рейс не найден')
+                    else:
+                        res.raise_for_status()
+
                 elif stype == 'arrival' and query:
                     res = requests.get(f"{settings.API_BASE_URL}/flights/search/by-arrival/{query}", headers=headers,
                                        timeout=5)
                     if res.status_code == 200:
-                        items = res.json()
+                        items = res.json()  # API возвращает список
+                        total = len(items)
+                    else:
+                        res.raise_for_status()
                 else:
+                    # Обычный список с пагинацией
                     res = requests.get(f"{settings.API_BASE_URL}/flights", params={'page': page_num, 'size': 10},
                                        headers=headers, timeout=5)
-                    if res.status_code == 200:
-                        data = res.json()
-                        items = data.get('items', [])
-            except requests.RequestException:
-                pass
-        else:
-            try:
-                res = requests.get(f"{settings.API_BASE_URL}/flights", params={'page': page_num, 'size': 10},
-                                   headers=headers, timeout=5)
-                if res.status_code == 200:
+                    res.raise_for_status()
                     data = res.json()
                     items = data.get('items', [])
-            except requests.RequestException:
-                pass
+                    total = data.get('total', 0)
+            else:
+                # Форма не валидна или пустая → грузим обычный список
+                res = requests.get(f"{settings.API_BASE_URL}/flights", params={'page': page_num, 'size': 10},
+                                   headers=headers, timeout=5)
+                res.raise_for_status()
+                data = res.json()
+                items = data.get('items', [])
+                total = data.get('total', 0)
 
-        # Нормализуем и обогащаем данными об аэропортах
-        airports_map = _fetch_airports_map(self.request)
-        items_normalized = _normalize_keys(items)
-        items_enriched = _enrich_flights_with_airports(items_normalized, airports_map)
+        except requests.HTTPError as e:
+            print(f"🔴 HTTP Error: {e.response.status_code} - {e.response.text}")
+            messages.error(self.request, f'Ошибка API: {e.response.status_code}')
+        except requests.RequestException as e:
+            print(f"🔴 Network Error: {e}")
+            messages.error(self.request, 'Нет связи с сервером рейсов')
 
-        paginator = Paginator(items_enriched, 10)
+        # 🔍 Отладка в консоли Django
+        print(f"🟢 Flights API: got {len(items)} items, total={total}")
+        if items:
+            print(f"🔑 Keys: {list(items[0].keys())}")
+
+        paginator = Paginator(_normalize_keys(items), 10)
         try:
             page_obj = paginator.page(page_num)
         except (PageNotAnInteger, EmptyPage):
@@ -322,16 +360,22 @@ class FlightCreateView(FormView):
         context['title'] = 'Новый авиарейс'
         return context
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Передаём токен из сессии в аргументы формы
+        kwargs['access_token'] = self.request.session.get('access_token')
+        return kwargs
+
     def form_valid(self, form):
         dep_airport = form.cleaned_data['departure_airport']
         arr_airport = form.cleaned_data['arrival_airport']
 
         # ✅ КРИТИЧНО: отправляем ICAO-коды вместо ID
         payload = {
-            'flightNumber': form.cleaned_data['flight_number'].upper(),
+            'flightNumber': form.cleaned_data['flight_number'],
             'airlineName': form.cleaned_data['airline_name'],
-            'departureAirportIcao': getattr(dep_airport, 'icao_code', str(dep_airport)),
-            'arrivalAirportIcao': getattr(arr_airport, 'icao_code', str(arr_airport)),
+            'departureAirportIcao': form.cleaned_data['departure_airport'],  # Теперь это строка 'UUSS'
+            'arrivalAirportIcao': form.cleaned_data['arrival_airport'],  # Теперь это строка 'UUEE'
             'departureDate': str(form.cleaned_data['departure_date']),
             'departureTime': str(form.cleaned_data['departure_time']),
             'totalSeats': form.cleaned_data['total_seats'],
