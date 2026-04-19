@@ -48,19 +48,14 @@
         <tbody>
             {% for flight in flights %}
             <tr class="flight-row {% if flight.free_seats == 0 %}sold-out{% endif %}">
-                <td>
-                    <strong>{{ flight.flight_number }}</strong>
-                </td>
+                <td><strong>{{ flight.flight_number }}</strong></td>
                 <td>{{ flight.airline_name }}</td>
                 <td>
                     <span class="route-mini">
-                        {{ flight.departure_airport.icao_code }}
+                        {{ flight.departure_airport_icao|default:"---" }}
                         <span class="arrow">→</span>
-                        {{ flight.arrival_airport.icao_code }}
+                        {{ flight.arrival_airport_icao|default:"---" }}
                     </span>
-                    <small class="route-cities">
-                        {{ flight.departure_airport.city }} — {{ flight.arrival_airport.city }}
-                    </small>
                 </td>
                 <td>
                     {{ flight.departure_date|date:"d.m.Y" }}<br>
@@ -72,10 +67,16 @@
                     </span>
                 </td>
                 <td class="actions-cell">
-                    <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
-                    <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-sm btn-success" title="Продать билет" {% if flight.free_seats == 0 %}disabled{% endif %}>🎫</a>
+                    {% if flight.id %}
+                        <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
+                        <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-sm btn-success" title="Продать билет" {% if flight.free_seats == 0 %}disabled{% endif %}>🎫</a>
+                    {% else %}
+                        <span class="text-muted">ID недоступен</span>
+                    {% endif %}
                 </td>
             </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center">Рейсы не найдены</td></tr>
             {% endfor %}
         </tbody>
     </table>
