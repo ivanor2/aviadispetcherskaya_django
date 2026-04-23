@@ -1,21 +1,25 @@
+import re
 import requests
 from django import forms
 from django.conf import settings
-import re
 
 class FlightForm(forms.Form):
-    """Форма создания/редактирования рейса (данные отправляются в FastAPI)"""
-    flight_number = forms.CharField(
-        max_length=10,
-        label="№ авиарейса",
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'SU-123'})
-    )
-    airline_name = forms.CharField(
-        max_length=255,
+    airline = forms.ChoiceField(
         label="Авиакомпания",
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        choices=[('', '---------')]
     )
-    # Используем ChoiceField, так как данные берем из API
+    flight_number = forms.CharField(
+        max_length=3,
+        label="Номер рейса (цифры)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '123',
+            'pattern': '\\d{3}',
+            'title': 'Введите ровно 3 цифры',
+            'inputmode': 'numeric'
+        })
+    )
     departure_airport = forms.ChoiceField(
         label="Аэропорт отправления",
         widget=forms.Select(attrs={'class': 'form-select'}),
@@ -48,43 +52,34 @@ class FlightForm(forms.Form):
 
     def __init__(self, *args, access_token=None, **kwargs):
         super().__init__(*args, **kwargs)
+        headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
 
-        headers = {}
-        if access_token:
-            headers['Authorization'] = f'Bearer {access_token}'
-
+        # ✅ Загрузка авиакомпаний из API
         try:
-            # ✅ Передаём headers в запрос
-            resp = requests.get(
-                f"{settings.API_BASE_URL}/airports",
-                params={'page': 1, 'size': 100},
-                headers=headers,
-                timeout=5
-            )
+            resp = requests.get(f"{settings.API_BASE_URL}/airlines", headers=headers, timeout=5)
+            if resp.status_code == 200:
+                airlines = resp.json()
+                self.fields['airline'].choices = [('', '---------')] + \
+                    [(a['code'], f"{a['code']} — {a['name']}") for a in airlines]
+        except Exception:
+            pass
+
+        # ✅ Загрузка аэропортов
+        try:
+            resp = requests.get(f"{settings.API_BASE_URL}/airports", params={'page': 1, 'size': 100}, headers=headers, timeout=5)
             if resp.status_code == 200:
                 airports = resp.json().get('items', [])
-                choices = [('', '---------')] + [
-                    (str(a['icao_code']), f"{a['icao_code']} — {a['name']}") for a in airports
-                ]
+                choices = [('', '---------')] + [(str(a['icao_code']), f"{a['icao_code']} — {a['name']}") for a in airports]
                 self.fields['departure_airport'].choices = choices
                 self.fields['arrival_airport'].choices = choices
         except Exception:
             pass
 
-
     def clean_flight_number(self):
-        flight_number = self.cleaned_data.get('flight_number', '').upper()
-        # Разрешаем 2 или 3 буквы (как в схеме API)
-        if not re.match(r'^[A-Z]{2,3}-\d{3}$', flight_number):
-            raise forms.ValidationError('Формат: AA-NNN или AAA-NNN')
-        return flight_number
-
-    def clean_free_seats(self):
-        free_seats = self.cleaned_data.get('free_seats')
-        total_seats = self.cleaned_data.get('total_seats')
-        if total_seats and free_seats is not None and free_seats > total_seats:
-            raise forms.ValidationError('Свободных мест не может быть больше общего количества')
-        return free_seats if free_seats is not None else total_seats
+        fn = self.cleaned_data.get('flight_number', '').strip()
+        if not re.match(r'^\d{3}$', fn):
+            raise forms.ValidationError('Номер рейса должен состоять ровно из 3 цифр')
+        return fn
 
     def clean(self):
         cleaned_data = super().clean()
@@ -93,7 +88,6 @@ class FlightForm(forms.Form):
         if dep and arr and dep == arr:
             raise forms.ValidationError('Аэропорты отправления и прибытия не могут совпадать')
         return cleaned_data
-
 
 class FlightSearchForm(forms.Form):
     """Форма поиска рейсов"""

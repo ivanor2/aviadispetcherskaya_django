@@ -282,9 +282,14 @@ class FlightCreateView(FormView):
         return kwargs
 
     def form_valid(self, form):
+        airline_code = form.cleaned_data['airline']
+        numeric_part = form.cleaned_data['flight_number']
+
+        full_flight_number = f"{airline_code}-{numeric_part}"
+
         payload = {
-            'flightNumber': form.cleaned_data['flight_number'],
-            'airlineName': form.cleaned_data['airline_name'],
+            'flightNumber': full_flight_number,
+            'airlineCode': airline_code,
             'departureAirportIcao': form.cleaned_data['departure_airport'],
             'arrivalAirportIcao': form.cleaned_data['arrival_airport'],
             'departureDate': str(form.cleaned_data['departure_date']),
@@ -297,6 +302,7 @@ class FlightCreateView(FormView):
         if success:
             messages.success(self.request, message)
             return super().form_valid(form)
+
         messages.error(self.request, message)
         return self.form_invalid(form)
 
