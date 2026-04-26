@@ -409,6 +409,7 @@ class FlightDetailView(TemplateView):
 
         if not flight_data:
             messages.error(request, 'Рейс не найден')
+            # ✅ ИЗМЕНЕНО: Перенаправляем на список рейсов, чтобы не рендерить шаблон с пустыми данными
             return redirect('app:flight_list')
 
         self._cached_flight_data = flight_data
@@ -418,22 +419,26 @@ class FlightDetailView(TemplateView):
         context = super().get_context_data(**kwargs)
         context.update(_get_role_perms(self.request))
 
-        token = self.request.session.get('access_token')
-        flight_id = kwargs.get('pk')
-
         flight_data = getattr(self, '_cached_flight_data', None)
-        if flight_data is None:
-            flight_data = FlightController.get_flight_by_id(flight_id, token)
+        token = self.request.session.get('access_token')
 
-        if not flight_data:
-            messages.error(self.request, 'Рейс не найден')
-            return context
+        # Безопасно получаем номер рейса (учитываем оба формата ключей)
+        flight_number = flight_data.get('flightNumber') or flight_data.get('flight_number', '')
 
-        flight_number = flight_data.get('flightNumber')
-        full_data = FlightController.get_flight_with_passengers(flight_number, token)
-        flight_data = full_data.get('flight', flight_data)
-        passengers_data = full_data.get('passengers', [])
+        # Пробуем получить пассажиров, но НЕ ломаем данные рейса при ошибке
+        passengers_data = []
+        try:
+            if flight_number:
+                full_data = FlightController.get_flight_with_passengers(flight_number, token)
+                # ✅ ИСПРАВЛЕНО: используем 'or', чтобы не затирать рейс, если пришел None
+                if isinstance(full_data, dict) and full_data.get('flight'):
+                    flight_data = full_data['flight']
+                passengers_data = full_data.get('passengers', [])
+        except Exception as e:
+            # Логируем, но продолжаем работу с исходными данными
+            print(f"⚠️ Не удалось загрузить пассажиров для рейса {kwargs.get('pk')}: {e}")
 
+        # Нормализация и обогащение
         airlines_map = _fetch_airlines_map(self.request)
         airports_map = _fetch_airports_map(self.request)
 
@@ -457,6 +462,23 @@ class FlightDeleteView(View):
             messages.success(request, 'Рейс успешно удалён')
         else:
             messages.error(request, 'Ошибка при удалении рейса')
+        return redirect('app:flight_list')
+
+class FlightDeleteAllView(View):
+    """Удаление всех рейсов (только для администратора)"""
+    def post(self, request):
+        if request.session.get('user_role') != 'admin':
+            messages.error(request, 'Доступ запрещён. Требуются права администратора.')
+            return redirect('app:flight_list')
+
+        token = request.session.get('access_token')
+        success, message = FlightController.delete_all_flights(token)
+
+        if success:
+            messages.success(request, message)
+        else:
+            messages.error(request, message)
+
         return redirect('app:flight_list')
 
 

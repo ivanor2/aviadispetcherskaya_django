@@ -4,9 +4,21 @@
 {% block title %}Все авиарейсы{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
     <h1>✈️ Авиарейсы</h1>
-    <a href="{% url 'app:flight_create' %}" class="btn btn-primary">➕ Добавить рейс</a>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <a href="{% url 'app:flight_create' %}" class="btn btn-primary">➕ Добавить рейс</a>
+
+        {% if is_admin %}
+        <form method="post" action="{% url 'app:flight_delete_all' %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"
+                    onclick="return confirm('⚠️ ВНИМАНИЕ! Вы уверены, что хотите удалить ВСЕ рейсы и связанные бронирования?\nЭто действие нельзя отменить.');">
+                🗑️ Удалить все рейсы
+            </button>
+        </form>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Форма поиска -->

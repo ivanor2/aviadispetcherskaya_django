@@ -20,6 +20,7 @@ urlpatterns = [
     path('flights/create/', views.FlightCreateView.as_view(), name='flight_create'),
     path('flights/search/', views.FlightSearchView.as_view(), name='flight_search'),
     path('flights/<int:pk>/delete/', views.FlightDeleteView.as_view(), name='flight_delete'),
+    path('flights/delete-all/', views.FlightDeleteAllView.as_view(), name='flight_delete_all'),
 
     # Пассажиры
     path('passengers/', views.PassengerListView.as_view(), name='passenger_list'),

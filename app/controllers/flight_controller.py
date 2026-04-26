@@ -68,3 +68,25 @@ class FlightController:
             return response.status_code == 204
         except requests.RequestException:
             return False
+
+    @staticmethod
+    def delete_all_flights(access_token: str = None) -> tuple[bool, str]:
+        """Удаляет все рейсы и связанные бронирования (требует роль admin)"""
+        headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
+        try:
+            response = requests.delete(
+                f"{FlightController.BASE_URL}/?confirm=true",
+                headers=headers,
+                timeout=15
+            )
+            if response.status_code == 204:
+                return True, 'Все рейсы и бронирования успешно удалены'
+
+            # Безопасное чтение ошибки
+            try:
+                detail = response.json().get('detail', 'Ошибка удаления')
+            except ValueError:
+                detail = f'Ошибка API: {response.status_code}'
+            return False, detail
+        except requests.RequestException as e:
+            return False, f'Сбой подключения к API: {e}'
