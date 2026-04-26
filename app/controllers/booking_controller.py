@@ -1,70 +1,39 @@
 import requests
 from django.conf import settings
-from app.forms import BookingForm
-
 
 class BookingController:
-    """Контроллер для работы с бронированиями через API"""
-
     BASE_URL = f"{settings.API_BASE_URL}/bookings"
 
     @staticmethod
-    def create_booking(form: BookingForm) -> tuple[bool, dict | None, str]:
-        """
-        Продать билет (создать бронирование) через форму
-        Returns: (success, data_or_errors, message)
-        """
-        if not form.is_valid():
-            return False, form.errors, 'Ошибка валидации формы'
-
+    def create_booking(payload: dict, access_token: str = None) -> tuple[bool, dict | None, str]:
+        """payload: {'flightId': int, 'passengerId': int}"""
+        headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'} if access_token else {}
         try:
-            response = requests.post(
-                BookingController.BASE_URL,
-                json=form.cleaned_data,
-                headers={'Content-Type': 'application/json'},
-                timeout=10
-            )
-            response.raise_for_status()
-            return True, response.json(), f'Билет оформлен! Код: {response.json().get("booking_code")}'
+            response = requests.post(BookingController.BASE_URL, json=payload, headers=headers, timeout=10)
+            if response.status_code == 201:
+                data = response.json()
+                return True, data, f'Билет оформлен! Код: {data.get("bookingCode")}'
+            detail = response.json().get('detail', 'Ошибка оформления')
+            return False, response.json(), detail
         except requests.RequestException as e:
-            return False, None, f'Ошибка API: {e}'
+            return False, None, f'Сбой API: {e}'
 
     @staticmethod
-    def cancel_booking(booking_id: int) -> bool:
-        """Отменить продажу билета (возврат)"""
+    def cancel_booking(booking_id: int, access_token: str = None) -> bool:
+        headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
         try:
-            response = requests.delete(
-                f"{BookingController.BASE_URL}/{booking_id}",
-                timeout=10
-            )
+            response = requests.delete(f"{BookingController.BASE_URL}/{booking_id}", headers=headers, timeout=10)
             return response.status_code == 204
         except requests.RequestException:
             return False
 
     @staticmethod
-    def get_bookings_by_flight(flight_id: int) -> list:
-        """Получить все бронирования для рейса"""
+    def get_bookings_by_flight(flight_id: int, access_token: str = None) -> list:
+        headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
         try:
-            response = requests.get(
-                f"{BookingController.BASE_URL}/flight/{flight_id}",
-                timeout=10
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get('items', [])
-        except requests.RequestException:
+            response = requests.get(f"{BookingController.BASE_URL}/by-flight/{flight_id}", headers=headers, timeout=5)
+            if response.status_code == 200:
+                return response.json()
             return []
-
-    @staticmethod
-    def get_bookings_by_passenger(passenger_id: int) -> list:
-        """Получить все бронирования пассажира"""
-        try:
-            response = requests.get(
-                f"{BookingController.BASE_URL}/passenger/{passenger_id}",
-                timeout=10
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get('items', [])
         except requests.RequestException:
             return []

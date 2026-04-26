@@ -19,26 +19,26 @@
         <div class="form-grid">
             <!-- Номер рейса -->
             <div class="form-group">
+                <label for="{{ form.airline.id_for_label }}">
+                    Авиакомпания <span class="required">*</span>
+                </label>
+                {{ form.airline }}
+                {% if form.airline.errors %}
+                    <small class="error">{{ form.airline.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <!-- Авиакомпания -->
+           <div class="form-group">
                 <label for="{{ form.flight_number.id_for_label }}">
-                    № авиарейса <span class="required">*</span>
+                    Номер рейса (цифры) <span class="required">*</span>
                 </label>
                 {{ form.flight_number }}
                 {% if form.flight_number.errors %}
                     <small class="error">{{ form.flight_number.errors.0 }}</small>
                 {% endif %}
-                <small class="help-text">Формат: AAA-NNN (SVO-123)</small>
-            </div>
-
-            <!-- Авиакомпания -->
-            <div class="form-group">
-                <label for="{{ form.airline_name.id_for_label }}">
-                    Авиакомпания <span class="required">*</span>
-                </label>
-                {{ form.airline_name }}
-                {% if form.airline_name.errors %}
-                    <small class="error">{{ form.airline_name.errors.0 }}</small>
-                {% endif %}
-            </div>
+                <small class="help-text">Итоговый номер: <span id="preview-number" style="font-weight: bold; color: #4fc3f7;">---</span></small>
+           </div>
 
             <!-- Аэропорты -->
             <div class="form-group">

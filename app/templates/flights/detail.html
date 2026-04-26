@@ -72,7 +72,18 @@
             {% if flight.free_seats > 0 %}
             <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-primary btn-lg">🎫 Продать билет</a>
             {% endif %}
+            {% if is_admin %}
+            <form method="post" action="{% url 'app:flight_delete' flight.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-lg"
+                onclick="return confirm('Вы уверены, что хотите удалить этот рейс? Это действие нельзя отменить.');">
+            🗑️ Удалить рейс
+        </button>
+    </form>
+    {% endif %}
+
             <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">← Назад к списку</a>
+
         </div>
     </section>
 

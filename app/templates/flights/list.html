@@ -1,6 +1,6 @@
+<!-- app/templates/flights/list.html -->
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Все авиарейсы{% endblock %}
 
 {% block content %}
@@ -49,14 +49,19 @@
             {% for flight in flights %}
             <tr class="flight-row {% if flight.free_seats == 0 %}sold-out{% endif %}">
                 <td><strong>{{ flight.flight_number }}</strong></td>
+
+                <!-- ✅ Используем имя авиакомпании -->
                 <td>{{ flight.airline_name }}</td>
+
                 <td>
                     <span class="route-mini">
-                        {{ flight.departure_airport_icao|default:"---" }}
+                        <!-- ✅ Используем имена аэропортов -->
+                        {{ flight.departure_airport_name }}
                         <span class="arrow">→</span>
-                        {{ flight.arrival_airport_icao|default:"---" }}
+                        {{ flight.arrival_airport_name }}
                     </span>
                 </td>
+
                 <td>
                     {{ flight.departure_date|date:"d.m.Y" }}<br>
                     <small>{{ flight.departure_time|time:"H:i" }}</small>
@@ -86,15 +91,13 @@
 {% if is_paginated %}
 <div class="pagination">
     {% if page_obj.has_previous %}
-        <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="pagination-link">« Первая</a>
-        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="pagination-link">‹ Назад</a>
+        <a href="?page=1{% if request.GET.search_type %}&search_type={{ request.GET.search_type }}{% endif %}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}" class="pagination-link">« Первая</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search_type %}&search_type={{ request.GET.search_type }}{% endif %}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}" class="pagination-link">‹ Назад</a>
     {% endif %}
-
     <span class="pagination-info">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
-
     {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="pagination-link">Вперёд ›</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="pagination-link">Последняя »</a>
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search_type %}&search_type={{ request.GET.search_type }}{% endif %}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}" class="pagination-link">Вперёд ›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search_type %}&search_type={{ request.GET.search_type }}{% endif %}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}" class="pagination-link">Последняя »</a>
     {% endif %}
 </div>
 {% endif %}
