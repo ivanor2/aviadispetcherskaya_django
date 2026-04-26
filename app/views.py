@@ -1,4 +1,6 @@
+# app/views.py
 import re
+from datetime import date, time, datetime
 from django.conf import settings
 from django.views import View
 from django.views.generic import TemplateView, FormView
@@ -8,14 +10,10 @@ from django.urls import reverse_lazy
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 from app.controllers import (
-    FlightController,
-    PassengerController,
-    BookingController,
-    AuthController
+    FlightController, PassengerController, BookingController, AuthController
 )
 from app.forms import (
-    LoginForm, RegisterForm, FlightSearchForm, PassengerSearchForm,
-    FlightForm
+    LoginForm, RegisterForm, FlightSearchForm, PassengerSearchForm, FlightForm
 )
 import requests
 
@@ -57,42 +55,116 @@ def _get_role_perms(request):
     }
 
 
-def _fetch_airports_map(request):
+def _fetch_airlines_map(request):
+    """Загружает карту {CODE: NAME} всех авиакомпаний"""
     token = _get_token(request)
     headers = {'Authorization': f'Bearer {token}'} if token else {}
     try:
-        resp = requests.get(f"{settings.API_BASE_URL}/airports", params={'page': 1, 'size': 200}, headers=headers,
-                            timeout=10)
+        resp = requests.get(f"{settings.API_BASE_URL}/airlines", headers=headers, timeout=5)
         if resp.status_code == 200:
-            data = resp.json()
-            items = data.get('items', [])
-            # Поддерживаем оба формата ключей от API
-            return {a.get('icaoCode', a.get('icao_code', '')): _normalize_keys(a) for a in items}
-    except requests.RequestException:
+            return {a.get('code', '').upper(): a.get('name', '') for a in resp.json()}
+    except Exception:
         pass
     return {}
 
 
-def _enrich_flights_with_airports(flights, airports_map):
-    """Добавляет к каждому рейсу объекты departure_airport и arrival_airport"""
-    result = []
+
+
+
+def _fetch_airports_map(request):
+    """Загружает справочник всех аэропортов {ICAO: данные}, обходя пагинацию."""
+    token = _get_token(request)
+    headers = {'Authorization': f'Bearer {token}'} if token else {}
+    result = {}
+    page = 1
+    size = 100  # максимум, разрешённый API
+    try:
+        while True:
+            resp = requests.get(
+                f"{settings.API_BASE_URL}/airports",
+                params={'page': page, 'size': size},
+                headers=headers,
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                break
+            data = resp.json()
+            items = data.get('items', [])
+            for a in items:
+                icao = (a.get('icao_code') or a.get('icaoCode') or '').strip().upper()
+                if icao:
+                    result[icao] = a
+            total_pages = data.get('pages', 1)
+            if page >= total_pages:
+                break
+            page += 1
+    except Exception:
+        pass
+    return result
+
+def _parse_date(value):
+    """Парсит строку даты 'YYYY-MM-DD' в объект date. Если уже date/datetime — возвращает как есть."""
+    if isinstance(value, (date, datetime)):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return datetime.strptime(value[:10], '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            pass
+    return value
+
+
+def _parse_time(value):
+    """Парсит строку времени 'HH:MM:SS' или 'HH:MM' в объект time. Если уже time — возвращает как есть."""
+    if isinstance(value, time):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return datetime.strptime(value[:5], '%H:%M').time()
+        except (ValueError, TypeError):
+            pass
+    return value
+
+
+def _enrich_flights_data(flights, airlines_map, airports_map):
+    """
+    Полное обогащение рейсов:
+    1. Подставляет название авиакомпании
+    2. Подставляет объекты аэропортов с названиями вместо кодов
+    3. Гарантирует наличие *_name полей (чтобы шаблоны не падали и не показывали пустоту)
+    4. Конвертирует строки даты/времени в объекты Python для корректной работы Django-фильтров
+    """
     for flight in flights:
-        # ✅ Пропускаем None значения
-        if flight is None:
-            result.append(None)
+        if not flight:
             continue
 
-        dep_icao = flight.get('departure_airport_icao')
-        arr_icao = flight.get('arrival_airport_icao')
+        # --- Авиакомпания ---
+        code = flight.get('airline_code', '').upper()
+        flight['airline_name'] = airlines_map.get(code, code)
 
-        flight['departure_airport'] = airports_map.get(dep_icao, {
-            'icao_code': dep_icao, 'name': 'Неизвестно', 'city': '', 'country': ''
-        })
-        flight['arrival_airport'] = airports_map.get(arr_icao, {
-            'icao_code': arr_icao, 'name': 'Неизвестно', 'city': '', 'country': ''
-        })
-        result.append(flight)
-    return result
+        # --- Аэропорты ---
+        dep_icao = (flight.get('departure_airport_icao') or flight.get('departureAirportIcao', '')).strip().upper()
+        arr_icao = (flight.get('arrival_airport_icao') or flight.get('arrivalAirportIcao', '')).strip().upper()
+
+
+        dep_data = airports_map.get(dep_icao)
+        arr_data = airports_map.get(arr_icao)
+
+
+        # Если аэропорт не найден в мапе, создаем заглушку с кодом
+        flight['departure_airport'] = dep_data or {'icao_code': dep_icao, 'name': dep_icao, 'city': '', 'country': ''}
+        flight['arrival_airport'] = arr_data or {'icao_code': arr_icao, 'name': arr_icao, 'city': '', 'country': ''}
+
+        # ✅ Имена аэропортов: берём name из справочника, если пустое — ICAO-код как запасной вариант
+        flight['departure_airport_name'] = (flight['departure_airport'].get('name') or '').strip() or dep_icao
+        flight['arrival_airport_name'] = (flight['arrival_airport'].get('name') or '').strip() or arr_icao
+
+        # ✅ Конвертируем строки даты и времени в объекты Python,
+        #    чтобы Django-фильтры |date:"d.m.Y" и |time:"H:i" работали корректно
+        flight['departure_date'] = _parse_date(flight.get('departure_date'))
+        flight['departure_time'] = _parse_time(flight.get('departure_time'))
+
+    return flights
 
 
 # ==========================================
@@ -175,15 +247,19 @@ class IndexView(TemplateView):
         try:
             flights_meta = FlightController.get_all_flights(page=1, size=1, access_token=token)
             passengers_meta = PassengerController.get_all_passengers(page=1, size=1, access_token=token)
-            flights_page = FlightController.get_all_flights(page=1, size=100, access_token=token)
             recent_data = FlightController.get_all_flights(page=1, size=6, access_token=token)
 
-            flights_items = flights_page.get('items', [])
+            flights_items = flights_meta.get('items', [])
             active_flights = sum(1 for f in flights_items if f.get('freeSeats', f.get('free_seats', 0)) > 0)
 
             recent_flights = _normalize_keys(recent_data.get('items', []))
+
+            # Загружаем справочники
+            airlines_map = _fetch_airlines_map(self.request)
             airports_map = _fetch_airports_map(self.request)
-            recent_flights_enriched = _enrich_flights_with_airports(recent_flights, airports_map)
+
+            # ✅ Обогащаем данные
+            recent_flights_enriched = _enrich_flights_data(recent_flights, airlines_map, airports_map)
 
             context.update({
                 'total_flights': flights_meta.get('total', 0),
@@ -207,49 +283,64 @@ class FlightListView(TemplateView):
         context = super().get_context_data(**kwargs)
         context.update(_get_role_perms(self.request))
         token = _get_token(self.request)
+
         page_num = self.request.GET.get('page', 1)
+        try:
+            page_num = int(page_num)
+        except (ValueError, TypeError):
+            page_num = 1
+
         search_form = FlightSearchForm(self.request.GET)
+        items, total, api_pages = [], 0, 1
 
-        items, total = [], 0
-
+        # 1. Получение данных
         if search_form.is_valid():
-            stype = search_form.cleaned_data.get('search_type')
             query = search_form.cleaned_data.get('query', '').strip()
-            try:
-                if stype == 'number' and query:
-                    # search_by_number возвращает список, используем его
-                    items = FlightController.search_by_number(query.upper(), token) if hasattr(FlightController,
-                                                                                               'search_by_number') else []
-                    # Если метода нет, используем get_flight_with_passengers
-                    if not items:
-                        data = FlightController.get_flight_with_passengers(query.upper(), token)
-                        if data.get('flight'):
-                            items = [data['flight']]
-                    total = len(items)
-                elif stype == 'arrival' and query:
+            if query:
+                stype = search_form.cleaned_data.get('search_type')
+                if stype == 'number':
+                    data = FlightController.get_flight_with_passengers(query.upper(), token)
+                    items = [data['flight']] if data.get('flight') else []
+                elif stype == 'arrival':
                     items = FlightController.search_by_arrival(query, token)
-                    total = len(items)
-                else:
-                    data = FlightController.get_all_flights(page=page_num, size=10, access_token=token)
-                    items = data.get('items', [])
-                    total = data.get('total', 0)
-            except Exception:
-                pass
+                total = len(items)
+                api_pages = max(1, (total + 9) // 10)
+            else:
+                data = FlightController.get_all_flights(page=page_num, size=10, access_token=token)
+                items = data.get('items', [])
+                total = data.get('total', 0)
+                api_pages = data.get('pages', 1)
         else:
             data = FlightController.get_all_flights(page=page_num, size=10, access_token=token)
             items = data.get('items', [])
             total = data.get('total', 0)
+            api_pages = data.get('pages', 1)
 
-        paginator = Paginator(_normalize_keys(items), 10)
-        try:
-            page_obj = paginator.page(page_num)
-        except (PageNotAnInteger, EmptyPage):
-            page_obj = paginator.page(1)
+        # 2. Нормализация и обогащение
+        normalized_items = _normalize_keys(items)
+
+        # ✅ Загружаем справочники
+        airlines_map = _fetch_airlines_map(self.request)
+        airports_map = _fetch_airports_map(self.request)
+
+        # ✅ Обогащаем данные именами и конвертируем даты
+        enriched_items = _enrich_flights_data(normalized_items, airlines_map, airports_map)
+
+        # 3. Пагинация
+        page_obj = {
+            'object_list': enriched_items,
+            'number': data.get('page', page_num),
+            'has_previous': page_num > 1,
+            'previous_page_number': max(1, page_num - 1),
+            'has_next': page_num < api_pages,
+            'next_page_number': min(page_num + 1, api_pages),
+            'paginator': {'num_pages': api_pages}
+        }
 
         context.update({
-            'flights': page_obj.object_list,
+            'flights': page_obj['object_list'],
             'page_obj': page_obj,
-            'is_paginated': page_obj.has_other_pages(),
+            'is_paginated': total > 10,
             'search_form': search_form
         })
         return context
@@ -312,80 +403,65 @@ class FlightDetailView(TemplateView):
     template_name = 'flights/detail.html'
 
     def get(self, request, *args, **kwargs):
-        """Проверка существования рейса перед рендером"""
         token = request.session.get('access_token')
         flight_id = kwargs.get('pk')
-
         flight_data = FlightController.get_flight_by_id(flight_id, token)
+
         if not flight_data:
             messages.error(request, 'Рейс не найден')
             return redirect('app:flight_list')
 
-        # Сохраняем данные в self для использования в get_context_data
         self._cached_flight_data = flight_data
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        """Подготовка контекста для шаблона"""
         context = super().get_context_data(**kwargs)
         context.update(_get_role_perms(self.request))
 
         token = self.request.session.get('access_token')
         flight_id = kwargs.get('pk')
 
-        # ✅ Используем кэшированные данные из get() или делаем новый запрос
         flight_data = getattr(self, '_cached_flight_data', None)
         if flight_data is None:
             flight_data = FlightController.get_flight_by_id(flight_id, token)
-            if not flight_data:
-                messages.error(self.request, 'Рейс не найден')
-                # Возвращаем пустой контекст, редирект из get() сработает при следующем запросе
-                return context
 
-        # Получаем пассажиров по номеру рейса
+        if not flight_data:
+            messages.error(self.request, 'Рейс не найден')
+            return context
+
         flight_number = flight_data.get('flightNumber')
         full_data = FlightController.get_flight_with_passengers(flight_number, token)
         flight_data = full_data.get('flight', flight_data)
         passengers_data = full_data.get('passengers', [])
 
-        # Нормализация и обогащение
+        airlines_map = _fetch_airlines_map(self.request)
         airports_map = _fetch_airports_map(self.request)
+
         flight_normalized = _normalize_keys(flight_data)
+        enriched_flights = _enrich_flights_data([flight_normalized], airlines_map, airports_map)
 
-        # ✅ Проверка: если нормализация вернула None, не передаём в enrich
-        if flight_normalized is None:
-            messages.error(self.request, 'Ошибка обработки данных рейса')
-            return context
-
-        flight_enriched = _enrich_flights_with_airports([flight_normalized], airports_map)[0]
+        flight_enriched = enriched_flights[0] if enriched_flights else None
 
         context.update({
             'flight': flight_enriched,
             'passengers': _normalize_keys(passengers_data)
         })
-
         return context
 
 
 class FlightDeleteView(View):
-    """Удаление рейса через API (POST запрос)"""
-
     def post(self, request, pk):
         token = request.session.get('access_token')
-
-        # Вызываем метод удаления через контроллер
         success = FlightController.delete_flight(pk, token)
-
         if success:
             messages.success(request, 'Рейс успешно удалён')
         else:
-            messages.error(request, 'Ошибка при удалении рейса (возможно, есть активные бронирования)')
-
+            messages.error(request, 'Ошибка при удалении рейса')
         return redirect('app:flight_list')
 
 
 # ==========================================
-# 👥 ПАССАЖИРЫ
+# 👥 ПАССАЖИРЫ И БРОНИРОВАНИЯ
 # ==========================================
 
 class PassengerListView(TemplateView):
@@ -441,7 +517,6 @@ class PassengerSearchView(FormView):
         query = form.cleaned_data['query']
         token = _get_token(self.request)
         result = None
-
         try:
             items = PassengerController.search_by_passport(query,
                                                            token) if stype == 'passport' else PassengerController.search_by_name(
@@ -461,13 +536,8 @@ class PassengerSearchView(FormView):
         return self.form_invalid(form)
 
 
-# ==========================================
-# 🎫 БРОНИРОВАНИЯ
-# ==========================================
-
 class BookingCreateView(FormView):
     template_name = 'bookings/create.html'
-    # form_class берется из urls или переопределяется, если нужно
     success_url = reverse_lazy('app:index')
 
     def get_form_class(self):
@@ -479,7 +549,6 @@ class BookingCreateView(FormView):
         context.update(_get_role_perms(self.request))
         flight_id = self.kwargs.get('flight_id')
         token = _get_token(self.request)
-
         context['flight'] = FlightController.get_flight_by_id(flight_id, token)
         if context['flight']:
             context['flight'] = _normalize_keys(context['flight'])
@@ -489,7 +558,6 @@ class BookingCreateView(FormView):
         flight_id = self.kwargs.get('flight_id')
         passenger_id = form.cleaned_data['passenger'].id if hasattr(form.cleaned_data['passenger'], 'id') else \
         form.cleaned_data['passenger']
-
         payload = {'flightId': flight_id, 'passengerId': passenger_id}
         success, data, message = BookingController.create_booking(payload, _get_token(self.request))
 
@@ -504,11 +572,9 @@ class BookingCancelView(View):
     def post(self, request, booking_id):
         token = _get_token(request)
         success = BookingController.cancel_booking(booking_id, token)
-
         if success:
             messages.success(request, 'Билет успешно возвращён')
         else:
             messages.error(request, 'Не удалось отменить бронирование')
-
         flight_id = request.POST.get('flight_id')
         return redirect('app:flight_detail', pk=flight_id) if flight_id else redirect('app:flight_list')

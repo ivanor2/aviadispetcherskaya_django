@@ -100,13 +100,13 @@
 
                 <div class="route">
                     <div class="airport">
-                        <span class="airport-code">{{ flight.departure_airport.icao_code }}</span>
-                        <span class="airport-name">{{ flight.departure_airport.city }}</span>
+                        <!-- ✅ Название аэропорта вместо кода -->
+                        <span class="airport-code">{{ flight.departure_airport_name }}</span>
                     </div>
                     <span class="route-arrow">✈</span>
                     <div class="airport">
-                        <span class="airport-code">{{ flight.arrival_airport.icao_code }}</span>
-                        <span class="airport-name">{{ flight.arrival_airport.city }}</span>
+                        <!-- ✅ Название аэропорта вместо кода -->
+                        <span class="airport-code">{{ flight.arrival_airport_name }}</span>
                     </div>
                 </div>
 
