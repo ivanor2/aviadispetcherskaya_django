@@ -29,4 +29,6 @@ urlpatterns = [
     # Бронирования
     path('bookings/create/<int:flight_id>/', views.BookingCreateView.as_view(), name='booking_create'),
     path('bookings/cancel/<int:booking_id>/', views.BookingCancelView.as_view(), name='booking_cancel'),
+    path('bookings/select/', views.BookingFlightSelectView.as_view(), name='booking_select'),
+
 ]

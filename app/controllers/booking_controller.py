@@ -2,7 +2,7 @@ import requests
 from django.conf import settings
 
 class BookingController:
-    BASE_URL = f"{settings.API_BASE_URL}/bookings"
+    BASE_URL = f"{settings.API_BASE_URL}/bookings/"
 
     @staticmethod
     def create_booking(payload: dict, access_token: str = None) -> tuple[bool, dict | None, str]:

@@ -13,7 +13,7 @@ from app.controllers import (
     FlightController, PassengerController, BookingController, AuthController
 )
 from app.forms import (
-    LoginForm, RegisterForm, FlightSearchForm, PassengerSearchForm, FlightForm
+    LoginForm, RegisterForm, FlightSearchForm, PassengerSearchForm, FlightForm, BookingForm
 )
 import requests
 
@@ -245,33 +245,35 @@ class IndexView(TemplateView):
         token = _get_token(self.request)
 
         try:
-            flights_meta = FlightController.get_all_flights(page=1, size=1, access_token=token)
+            # Загружаем больше рейсов сразу для статистики и выпадающего списка
+            flights_data = FlightController.get_all_flights(page=1, size=50, access_token=token)
             passengers_meta = PassengerController.get_all_passengers(page=1, size=1, access_token=token)
-            recent_data = FlightController.get_all_flights(page=1, size=6, access_token=token)
 
-            flights_items = flights_meta.get('items', [])
-            active_flights = sum(1 for f in flights_items if f.get('freeSeats', f.get('free_seats', 0)) > 0)
-
-            recent_flights = _normalize_keys(recent_data.get('items', []))
+            all_items = flights_data.get('items', [])
+            normalized_all = _normalize_keys(all_items)
 
             # Загружаем справочники
             airlines_map = _fetch_airlines_map(self.request)
             airports_map = _fetch_airports_map(self.request)
 
-            # ✅ Обогащаем данные
-            recent_flights_enriched = _enrich_flights_data(recent_flights, airlines_map, airports_map)
+            # Обогащаем данные
+            enriched_all = _enrich_flights_data(normalized_all, airlines_map, airports_map)
+
+            active_count = sum(1 for f in normalized_all if f.get('free_seats', 0) > 0)
 
             context.update({
-                'total_flights': flights_meta.get('total', 0),
+                'total_flights': flights_data.get('total', 0),
                 'total_passengers': passengers_meta.get('total', 0),
-                'active_flights': active_flights,
+                'active_flights': active_count,
                 'total_bookings': 0,
-                'recent_flights': recent_flights_enriched
+                'recent_flights': enriched_all[:6],          # Для карточек
+                'flights_for_booking': enriched_all,         # Полный список для селекта
             })
         except Exception:
             context.update({
                 'total_flights': 0, 'total_passengers': 0,
-                'active_flights': 0, 'total_bookings': 0, 'recent_flights': []
+                'active_flights': 0, 'total_bookings': 0,
+                'recent_flights': [], 'flights_for_booking': []
             })
         return context
 
@@ -560,35 +562,76 @@ class PassengerSearchView(FormView):
 
 class BookingCreateView(FormView):
     template_name = 'bookings/create.html'
-    success_url = reverse_lazy('app:index')
-
-    def get_form_class(self):
-        from app.forms import BookingForm
-        return BookingForm
+    form_class = BookingForm
+    success_url = reverse_lazy('app:index')  # Или redirect на страницу рейса
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(_get_role_perms(self.request))
+
         flight_id = self.kwargs.get('flight_id')
         token = _get_token(self.request)
-        context['flight'] = FlightController.get_flight_by_id(flight_id, token)
-        if context['flight']:
-            context['flight'] = _normalize_keys(context['flight'])
+
+        # Получаем данные рейса для отображения в шаблоне
+        flight_data = FlightController.get_flight_by_id(flight_id, token)
+        if flight_data:
+            context['flight'] = _normalize_keys(flight_data)
+        else:
+            messages.error(self.request, 'Рейс не найден')
+
         return context
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['access_token'] = _get_token(self.request)
+        return kwargs
+
     def form_valid(self, form):
+        token = _get_token(self.request)
         flight_id = self.kwargs.get('flight_id')
-        passenger_id = form.cleaned_data['passenger'].id if hasattr(form.cleaned_data['passenger'], 'id') else \
-        form.cleaned_data['passenger']
-        payload = {'flightId': flight_id, 'passengerId': passenger_id}
-        success, data, message = BookingController.create_booking(payload, _get_token(self.request))
+        passenger_id = None
+
+        # 1. Если новый пассажир — создаем его через API
+        if form.cleaned_data.get('is_new_passenger'):
+            p_payload = {
+                'passportNumber': form.cleaned_data['new_passport_number'],
+                'fullName': form.cleaned_data['new_full_name'],
+                'passportIssuedBy': form.cleaned_data['new_passport_issued_by'],
+                'passportIssueDate': form.cleaned_data['new_passport_issue_date'].isoformat(),
+                'birthDate': form.cleaned_data['new_birth_date'].isoformat()
+            }
+
+            success, p_data, msg = PassengerController.create_passenger(p_payload, token)
+            if not success:
+                # Если ошибка валидации от API (например, дубль паспорта)
+                if isinstance(p_data, dict) and 'detail' in p_data:
+                    form.add_error(None, p_data['detail'])
+                else:
+                    messages.error(self.request, msg)
+                return self.form_invalid(form)
+
+            passenger_id = p_data.get('id')
+
+        else:
+            # 2. Используем выбранного пассажира
+            passenger_id = form.cleaned_data['passenger']
+
+        # 3. Создаем бронирование
+        booking_payload = {
+            'flightId': flight_id,
+            'passengerId': passenger_id
+        }
+
+        success, b_data, msg = BookingController.create_booking(booking_payload, token)
 
         if success:
-            messages.success(self.request, message)
+            messages.success(self.request,
+                             f"Билет успешно продан! Код бронирования: {b_data.get('bookingCode', b_data.get('booking_code', 'N/A'))}")
             return redirect('app:flight_detail', pk=flight_id)
-        messages.error(self.request, message)
-        return self.form_invalid(form)
-
+        else:
+            detail = b_data.get('detail', msg) if isinstance(b_data, dict) else msg
+            messages.error(self.request, f"Ошибка бронирования: {detail}")
+            return self.form_invalid(form)
 
 class BookingCancelView(View):
     def post(self, request, booking_id):
@@ -600,3 +643,16 @@ class BookingCancelView(View):
             messages.error(request, 'Не удалось отменить бронирование')
         flight_id = request.POST.get('flight_id')
         return redirect('app:flight_detail', pk=flight_id) if flight_id else redirect('app:flight_list')
+
+class BookingFlightSelectView(View):
+    """Промежуточное представление: принимает ID рейса из GET и редиректит на создание бронирования"""
+    def get(self, request):
+        flight_id = request.GET.get('flight_id')
+        if not flight_id:
+            messages.error(request, 'Пожалуйста, выберите рейс из списка')
+            return redirect('app:index')
+        try:
+            return redirect('app:booking_create', flight_id=int(flight_id))
+        except ValueError:
+            messages.error(request, 'Некорректный идентификатор рейса')
+            return redirect('app:index')

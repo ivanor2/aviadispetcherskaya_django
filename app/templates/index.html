@@ -81,6 +81,32 @@
             {% endif %}
         </div>
     </section>
+        {% if can_manage_bookings %}
+    <section class="quick-ticket-sale-section" style="margin-top: 2rem; margin-bottom: 2rem;">
+        <div class="form-container" style="padding: 1.5rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
+            <h2 style="margin-bottom: 1rem; color: #1a1a2e;">🎫 Быстрая продажа билета</h2>
+            <form action="{% url 'app:booking_select' %}" method="get" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1; min-width: 250px;">
+                    <label for="flight_id_select" style="font-weight: 500; margin-bottom: 0.5rem; display: block; color: #333;">Выберите рейс</label>
+                    <select name="flight_id" id="flight_id_select" required class="form-select" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
+                        <option value="">-- Активные рейсы с местами --</option>
+                        {% for flight in flights_for_booking %}
+                            {% if flight.free_seats > 0 %}
+                            <option value="{{ flight.id }}">
+                                {{ flight.flight_number }} | {{ flight.departure_airport_name }} ✈️ {{ flight.arrival_airport_name }} | {{ flight.departure_date|date:"d.m.Y" }} (осталось {{ flight.free_seats }} мест)
+                            </option>
+                            {% endif %}
+                        {% empty %}
+                            <option value="" disabled>Нет доступных рейсов</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">🎫 Продать билет</button>
+            </form>
+        </div>
+    </section>
+    {% endif %}
+
 
     <!-- Ближайшие рейсы -->
     <section class="flights-section">

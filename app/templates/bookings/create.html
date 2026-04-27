@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Продажа билета — {{ flight.flight_number }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="page-header">
+        <h1>🎫 Продажа билета</h1>
+        {% if flight %}
+        <p class="text-muted">
+            Рейс: <strong>{{ flight.flight_number }}</strong> |
+            {{ flight.departure_airport_name }} ✈️ {{ flight.arrival_airport_name }} |
+            {{ flight.departure_date|date:"d.m.Y" }}
+        </p>
+        {% endif %}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Блок выбора пассажира -->
+        <div class="form-group">
+            <label for="{{ form.passenger.id_for_label }}">Пассажир <span class="required">*</span></label>
+            {{ form.passenger }}
+            <div class="form-check mt-2">
+                {{ form.is_new_passenger }}
+                <label class="form-check-label" for="{{ form.is_new_passenger.id_for_label }}">
+                    Зарегистрировать нового пассажира
+                </label>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Блок данных нового пассажира (скрыт по умолчанию) -->
+        <div id="new-passenger-fields" style="display: none;">
+            <h4>Данные нового пассажира</h4>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.new_full_name.id_for_label }}">ФИО <span class="required">*</span></label>
+                    {{ form.new_full_name }}
+                    {% if form.new_full_name.errors %}<small class="error">{{ form.new_full_name.errors.0 }}</small>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.new_passport_number.id_for_label }}">Паспорт <span class="required">*</span></label>
+                    {{ form.new_passport_number }}
+                    {% if form.new_passport_number.errors %}<small class="error">{{ form.new_passport_number.errors.0 }}</small>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.new_passport_issued_by.id_for_label }}">Кем выдан <span class="required">*</span></label>
+                    {{ form.new_passport_issued_by }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.new_passport_issue_date.id_for_label }}">Дата выдачи <span class="required">*</span></label>
+                    {{ form.new_passport_issue_date }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.new_birth_date.id_for_label }}">Дата рождения <span class="required">*</span></label>
+                    {{ form.new_birth_date }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">✅ Продать билет</button>
+            <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Простой скрипт для переключения полей
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkbox = document.getElementById('id_is_new_passenger');
+        const fields = document.getElementById('new-passenger-fields');
+        const passengerSelect = document.getElementById('id_passenger_select');
+
+        function toggleFields() {
+            if (checkbox.checked) {
+                fields.style.display = 'block';
+                passengerSelect.disabled = true;
+                passengerSelect.value = '';
+            } else {
+                fields.style.display = 'none';
+                passengerSelect.disabled = false;
+            }
+        }
+
+        checkbox.addEventListener('change', toggleFields);
+        toggleFields(); // Инициализация
+    });
+</script>
+{% endblock %}
