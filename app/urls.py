@@ -3,7 +3,7 @@ from django.urls import path
 from app import views
 from django.contrib.auth import views as auth_views
 
-app_name = 'app'  # ✅ Пространство имён
+app_name = 'app'
 
 urlpatterns = [
     # Главная страница
@@ -30,5 +30,6 @@ urlpatterns = [
     path('bookings/create/<int:flight_id>/', views.BookingCreateView.as_view(), name='booking_create'),
     path('bookings/cancel/<int:booking_id>/', views.BookingCancelView.as_view(), name='booking_cancel'),
     path('bookings/select/', views.BookingFlightSelectView.as_view(), name='booking_select'),
+    path('bookings/add-connection/', views.BookingConnectionView.as_view(), name='booking_add_connection'),
 
 ]

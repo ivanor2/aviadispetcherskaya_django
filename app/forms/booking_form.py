@@ -1,87 +1,76 @@
+import re
 from django import forms
-from app.models import Booking, Flight, Passenger
+from app.controllers import PassengerController, FlightController
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BookingForm(forms.Form):
-    """Форма продажи билета"""
-
-    # Выбор существующего пассажира
-    passenger = forms.ChoiceField(
-        label="Выберите пассажира",
-        choices=[('', '--- Выберите или создайте нового ---')],
-        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_passenger_select'}),
-        required=False
-    )
-
-    # Переключатель режима
-    is_new_passenger = forms.BooleanField(
+    # Загружаем рейсы для выбора пересадки
+    connection_flight_id = forms.ChoiceField(
         required=False,
-        label="Зарегистрировать нового пассажира",
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_new_passenger'})
+        choices=[('', '--- Не нужна пересадка ---')],
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Рейс для пересадки (опционально)"
     )
 
-    # Поля для нового пассажира
-    new_passport_number = forms.CharField(
-        max_length=11, required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '1234-567890'})
-    )
-    new_full_name = forms.CharField(
-        max_length=255, required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Иванов Иван Иванович'})
-    )
-    new_passport_issued_by = forms.CharField(
-        max_length=255, required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'УФМС России...'})
-    )
-    new_passport_issue_date = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
-    )
-    new_birth_date = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
-    )
-
-    def __init__(self, *args, access_token=None, **kwargs):
+    def __init__(self, *args, access_token=None, current_flight_id=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Загружаем список пассажиров из API для выпадающего списка
-        from app.controllers import PassengerController
-        if access_token:
-            data = PassengerController.get_all_passengers(page=1, size=100, access_token=access_token)
-            items = data.get('items', [])
-            # Формируем список (id, "ФИО (Паспорт)")
-            choices = [('', '--- Выберите пассажира ---')] + [
-                (str(p['id']),
-                 f"{p.get('fullName', p.get('full_name'))} ({p.get('passportNumber', p.get('passport_number'))})")
-                for p in items
-            ]
-            self.fields['passenger'].choices = choices
+        # 1. Загружаем пассажиров
+        self.passenger_choices = [('', '-- Выберите пассажира --')]
 
-    def clean_passport_number(self):
-        p = self.cleaned_data.get('new_passport_number')
-        if p and not re.match(r'^\d{4}-\d{6}$', p):
-            raise forms.ValidationError('Формат паспорта: NNNN-NNNNNN')
-        return p
+        if access_token:
+            try:
+                # Пассажиры
+                p_data = PassengerController.get_all_passengers(page=1, size=100, access_token=access_token)
+                p_items = p_data.get('items', [])
+                for p in p_items:
+                    p_id = str(p.get('id'))
+                    name = p.get('fullName') or p.get('full_name') or 'Без имени'
+                    passport = p.get('passportNumber') or p.get('passport_number') or '?'
+                    self.passenger_choices.append((p_id, f"{name} ({passport})"))
+
+                # 2. Загружаем рейсы для пересадки
+                f_data = FlightController.get_all_flights(page=1, size=100, access_token=access_token)
+                f_items = f_data.get('items', [])
+
+                flight_choices = [('', '--- Не нужна пересадка ---')]
+                for f in f_items:
+                    fid = str(f.get('id'))
+                    fid_int = int(fid)
+
+                    # Исключаем текущий рейс из списка пересадок
+                    if current_flight_id and fid_int == int(current_flight_id):
+                        continue
+
+                    # Показываем только рейсы с доступными местами
+                    free_seats = f.get('free_seats') or f.get('freeSeats', 0)
+                    if not free_seats or free_seats <= 0:
+                        continue
+
+                    # Формируем красивую метку
+                    fnum = f.get('flightNumber') or f.get('flight_number', 'N/A')
+                    dep = f.get('departureAirportIcao') or f.get('departure_airport_icao', '?')
+                    arr = f.get('arrivalAirportIcao') or f.get('arrival_airport_icao', '?')
+                    date = f.get('departureDate') or f.get('departure_date', '?')
+
+                    label = f"✈️ {fnum} | {dep} → {arr} | {date} (мест: {free_seats})"
+                    flight_choices.append((fid, label))
+
+                self.fields['connection_flight_id'].choices = flight_choices
+
+            except Exception as e:
+                logger.error(f"BookingForm: Ошибка загрузки данных: {e}")
+                self.passenger_choices.append(('', '⚠️ Ошибка подключения к API'))
 
     def clean(self):
         cleaned_data = super().clean()
-        is_new = cleaned_data.get('is_new_passenger')
-        passenger_id = cleaned_data.get('passenger')
-
-        if is_new:
-            # Если новый пассажир, проверяем заполнение полей
-            required_fields = ['new_passport_number', 'new_full_name', 'new_passport_issued_by',
-                               'new_passport_issue_date', 'new_birth_date']
-            for field in required_fields:
-                if not cleaned_data.get(field):
-                    self.add_error(field, 'Это поле обязательно при регистрации нового пассажира')
-        else:
-            # Если существующий, должен быть выбран
-            if not passenger_id:
-                self.add_error('passenger', 'Выберите пассажира или отметьте "Зарегистрировать нового"')
-
+        # Проверяем, что хотя бы один пассажир выбран (логика из JS, но для безопасности)
+        # Валидация пассажиров происходит во View через request.POST.getlist
         return cleaned_data
+
 
 class BookingCancelForm(forms.Form):
     """Форма отмены бронирования"""

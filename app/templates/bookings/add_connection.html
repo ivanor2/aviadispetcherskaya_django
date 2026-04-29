@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Добавить пересадку{% endblock %}
+{% block content %}
+<div class="form-container">
+    <h2>🔄 Добавить пересадку к существующему бронированию</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-group">
+            {{ form.booking_code.label_tag }} {{ form.booking_code }}
+        </div>
+        <div class="form-group">
+            {{ form.flight_id.label_tag }} {{ form.flight_id }}
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Добавить пересадку</button>
+            <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

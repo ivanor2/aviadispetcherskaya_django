@@ -1,6 +1,8 @@
 # app/views.py
 import re
 from datetime import date, time, datetime
+
+from django import forms
 from django.conf import settings
 from django.views import View
 from django.views.generic import TemplateView, FormView
@@ -23,15 +25,15 @@ import requests
 # ==========================================
 
 def _normalize_keys(data):
-    """Рекурсивно преобразует camelCase ключи API в snake_case"""
     if isinstance(data, dict):
         result = {}
         for k, v in data.items():
             if k == 'id':
                 result['id'] = v
             else:
-                snake_key = re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower()
-                result[snake_key] = _normalize_keys(v)
+                snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in k]).lstrip('_')
+                # Рекурсивно обрабатываем вложенные значения
+                result[snake_key] = _normalize_keys(v) if isinstance(v, (dict, list)) else v
         return result
     elif isinstance(data, list):
         return [_normalize_keys(item) for item in data]
@@ -411,7 +413,6 @@ class FlightDetailView(TemplateView):
 
         if not flight_data:
             messages.error(request, 'Рейс не найден')
-            # ✅ ИЗМЕНЕНО: Перенаправляем на список рейсов, чтобы не рендерить шаблон с пустыми данными
             return redirect('app:flight_list')
 
         self._cached_flight_data = flight_data
@@ -432,7 +433,6 @@ class FlightDetailView(TemplateView):
         try:
             if flight_number:
                 full_data = FlightController.get_flight_with_passengers(flight_number, token)
-                # ✅ ИСПРАВЛЕНО: используем 'or', чтобы не затирать рейс, если пришел None
                 if isinstance(full_data, dict) and full_data.get('flight'):
                     flight_data = full_data['flight']
                 passengers_data = full_data.get('passengers', [])
@@ -485,7 +485,7 @@ class FlightDeleteAllView(View):
 
 
 # ==========================================
-# 👥 ПАССАЖИРЫ И БРОНИРОВАНИЯ
+# ПАССАЖИРЫ И БРОНИРОВАНИЯ
 # ==========================================
 
 class PassengerListView(TemplateView):
@@ -563,7 +563,7 @@ class PassengerSearchView(FormView):
 class BookingCreateView(FormView):
     template_name = 'bookings/create.html'
     form_class = BookingForm
-    success_url = reverse_lazy('app:index')  # Или redirect на страницу рейса
+    success_url = reverse_lazy('app:flight_list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -571,67 +571,78 @@ class BookingCreateView(FormView):
 
         flight_id = self.kwargs.get('flight_id')
         token = _get_token(self.request)
-
-        # Получаем данные рейса для отображения в шаблоне
         flight_data = FlightController.get_flight_by_id(flight_id, token)
+
         if flight_data:
             context['flight'] = _normalize_keys(flight_data)
         else:
             messages.error(self.request, 'Рейс не найден')
 
+        form = self.get_form()
+        context['passenger_choices'] = form.passenger_choices
         return context
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['access_token'] = _get_token(self.request)
+        # 🔥 Передаем ID текущего рейса, чтобы исключить его из списка пересадок
+        kwargs['current_flight_id'] = self.kwargs.get('flight_id')
         return kwargs
 
     def form_valid(self, form):
         token = _get_token(self.request)
         flight_id = self.kwargs.get('flight_id')
-        passenger_id = None
 
-        # 1. Если новый пассажир — создаем его через API
-        if form.cleaned_data.get('is_new_passenger'):
-            p_payload = {
-                'passportNumber': form.cleaned_data['new_passport_number'],
-                'fullName': form.cleaned_data['new_full_name'],
-                'passportIssuedBy': form.cleaned_data['new_passport_issued_by'],
-                'passportIssueDate': form.cleaned_data['new_passport_issue_date'].isoformat(),
-                'birthDate': form.cleaned_data['new_birth_date'].isoformat()
-            }
+        # Получаем всех пассажиров из динамических селектов
+        passenger_ids_raw = self.request.POST.getlist('passenger_ids')
+        passenger_ids = [int(pid) for pid in passenger_ids_raw if pid and pid.strip()]
 
-            success, p_data, msg = PassengerController.create_passenger(p_payload, token)
-            if not success:
-                # Если ошибка валидации от API (например, дубль паспорта)
-                if isinstance(p_data, dict) and 'detail' in p_data:
-                    form.add_error(None, p_data['detail'])
-                else:
-                    messages.error(self.request, msg)
-                return self.form_invalid(form)
+        if not passenger_ids:
+            form.add_error(None, 'Необходимо выбрать хотя бы одного пассажира')
+            return self.form_invalid(form)
 
-            passenger_id = p_data.get('id')
+        # Получаем ID рейса пересадки из выпадающего списка
+        connection_id = form.cleaned_data.get('connection_flight_id')
 
-        else:
-            # 2. Используем выбранного пассажира
-            passenger_id = form.cleaned_data['passenger']
-
-        # 3. Создаем бронирование
-        booking_payload = {
+        payload = {
             'flightId': flight_id,
-            'passengerId': passenger_id
+            'passengerIds': passenger_ids,
         }
 
-        success, b_data, msg = BookingController.create_booking(booking_payload, token)
+        # Если рейс пересадки выбран, добавляем в payload
+        if connection_id:
+            payload['connectionFlightIds'] = [int(connection_id)]
+
+        success, data, msg = BookingController.create_booking(payload, token)
 
         if success:
-            messages.success(self.request,
-                             f"Билет успешно продан! Код бронирования: {b_data.get('bookingCode', b_data.get('booking_code', 'N/A'))}")
+            booking_code = data[0].get('bookingCode', 'N/A') if data else 'N/A'
+            messages.success(self.request, f'Билеты оформлены! Код: {booking_code}')
             return redirect('app:flight_detail', pk=flight_id)
-        else:
-            detail = b_data.get('detail', msg) if isinstance(b_data, dict) else msg
-            messages.error(self.request, f"Ошибка бронирования: {detail}")
-            return self.form_invalid(form)
+
+        messages.error(self.request, f'Ошибка: {msg}')
+        return self.form_invalid(form)
+
+class BookingConnectionView(FormView):
+    template_name = 'bookings/add_connection.html'
+    form_class = type('AddConnectionForm', (forms.Form,), {
+        'booking_code': forms.CharField(label='Код бронирования', widget=forms.TextInput(attrs={'class': 'form-control'})),
+        'flight_id': forms.IntegerField(label='ID рейса пересадки', widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    })
+    success_url = reverse_lazy('app:flight_list')
+
+    def form_valid(self, form):
+        token = _get_token(self.request)
+        success, data, msg = BookingController.add_connections(
+            form.cleaned_data['booking_code'],
+            [form.cleaned_data['flight_id']],
+            token
+        )
+        if success:
+            messages.success(self.request, msg)
+            return redirect('app:flight_list')
+        messages.error(self.request, f'Ошибка: {msg}')
+        return self.form_invalid(form)
 
 class BookingCancelView(View):
     def post(self, request, booking_id):

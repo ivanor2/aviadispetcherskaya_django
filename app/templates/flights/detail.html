@@ -92,7 +92,7 @@
         <h3>👥 Пассажиры на рейсе ({{ passengers|length }})</h3>
 
         {% if passengers %}
-        <div class="passengers-table-container">
+       <div class="passengers-table-container">
             <table class="passengers-table">
                 <thead>
                     <tr>
@@ -111,11 +111,16 @@
                         <td>{{ booking.passenger.passport_number }}</td>
                         <td>{{ booking.booked_at|date:"d.m.Y H:i" }}</td>
                         <td>
-                            <form method="post" action="{% url 'app:booking_cancel' booking.id %}" onsubmit="return confirm('Отменить бронирование?');">
+                            {% if can_cancel_booking %}
+                            <form method="post" action="{% url 'app:booking_cancel' booking.id %}"
+                                  onsubmit="return confirm('Отменить бронирование?');">
                                 {% csrf_token %}
                                 <input type="hidden" name="flight_id" value="{{ flight.id }}">
                                 <button type="submit" class="btn btn-sm btn-danger">↩️ Возврат</button>
                             </form>
+                            {% else %}
+                            <span class="text-muted">Только админ</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -125,9 +130,8 @@
         {% else %}
         <p class="empty-state">На этот рейс ещё не куплено ни одного билета</p>
         {% endif %}
-        <td>
-    {% if can_cancel_booking %}
-    <form method="post" action="{% url 'app:booking_cancel' booking.id %}" onsubmit="return confirm('Отменить бронирование?');">
+        {% if can_cancel_booking %}
+        <form method="post" action="{% url 'app:booking_cancel' booking.id %}" onsubmit="return confirm('Отменить бронирование?');">
         {% csrf_token %}
         <input type="hidden" name="flight_id" value="{{ flight.id }}">
         <button type="submit" class="btn btn-sm btn-danger">↩️ Возврат</button>

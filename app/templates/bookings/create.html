@@ -1,96 +1,79 @@
 {% extends 'base.html' %}
 {% block title %}Продажа билета — {{ flight.flight_number }}{% endblock %}
-
 {% block content %}
 <div class="form-container">
-    <div class="page-header">
-        <h1>🎫 Продажа билета</h1>
-        {% if flight %}
-        <p class="text-muted">
-            Рейс: <strong>{{ flight.flight_number }}</strong> |
-            {{ flight.departure_airport_name }} ✈️ {{ flight.arrival_airport_name }} |
-            {{ flight.departure_date|date:"d.m.Y" }}
-        </p>
-        {% endif %}
-    </div>
+    <h2>🎫 Оформление бронирования</h2>
+    {% if flight %}
+    <p>Рейс: <strong>{{ flight.flight_number }}</strong> | {{ flight.departure_date|date:"d.m.Y" }} (Осталось мест: {{ flight.free_seats }})</p>
+    {% endif %}
 
-    <form method="post">
+    <form method="post" id="booking-form">
         {% csrf_token %}
-
         {% if form.non_field_errors %}
         <div class="alert alert-error">{{ form.non_field_errors }}</div>
         {% endif %}
 
-        <!-- Блок выбора пассажира -->
         <div class="form-group">
-            <label for="{{ form.passenger.id_for_label }}">Пассажир <span class="required">*</span></label>
-            {{ form.passenger }}
-            <div class="form-check mt-2">
-                {{ form.is_new_passenger }}
-                <label class="form-check-label" for="{{ form.is_new_passenger.id_for_label }}">
-                    Зарегистрировать нового пассажира
-                </label>
+            <label>Пассажиры <span class="required">*</span></label>
+            <div id="passengers-container">
+                <div class="passenger-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                    <select name="passenger_ids" class="form-select" style="flex-grow: 1;">
+                        {% for val, label in passenger_choices %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-sm btn-success add-btn" title="Добавить пассажира">+</button>
+                </div>
             </div>
+            <small class="help-text">Нажмите <code>+</code>, чтобы добавить ещё одного пассажира</small>
         </div>
 
         <hr class="my-4">
 
-        <!-- Блок данных нового пассажира (скрыт по умолчанию) -->
-        <div id="new-passenger-fields" style="display: none;">
-            <h4>Данные нового пассажира</h4>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="{{ form.new_full_name.id_for_label }}">ФИО <span class="required">*</span></label>
-                    {{ form.new_full_name }}
-                    {% if form.new_full_name.errors %}<small class="error">{{ form.new_full_name.errors.0 }}</small>{% endif %}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.new_passport_number.id_for_label }}">Паспорт <span class="required">*</span></label>
-                    {{ form.new_passport_number }}
-                    {% if form.new_passport_number.errors %}<small class="error">{{ form.new_passport_number.errors.0 }}</small>{% endif %}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.new_passport_issued_by.id_for_label }}">Кем выдан <span class="required">*</span></label>
-                    {{ form.new_passport_issued_by }}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.new_passport_issue_date.id_for_label }}">Дата выдачи <span class="required">*</span></label>
-                    {{ form.new_passport_issue_date }}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.new_birth_date.id_for_label }}">Дата рождения <span class="required">*</span></label>
-                    {{ form.new_birth_date }}
-                </div>
-            </div>
+        <div class="form-group">
+            <label for="{{ form.connection_flight_id.id_for_label }}">{{ form.connection_flight_id.label }}</label>
+            {{ form.connection_flight_id }}
+            <small class="help-text">Выберите рейс, на который нужно добавить билеты для всех пассажиров (опционально)</small>
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-lg">✅ Продать билет</button>
+            <button type="submit" class="btn btn-primary btn-lg">✅ Оформить билеты</button>
             <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-secondary">Отмена</a>
         </div>
     </form>
 </div>
 
 <script>
-    // Простой скрипт для переключения полей
-    document.addEventListener('DOMContentLoaded', function() {
-        const checkbox = document.getElementById('id_is_new_passenger');
-        const fields = document.getElementById('new-passenger-fields');
-        const passengerSelect = document.getElementById('id_passenger_select');
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('passengers-container');
 
-        function toggleFields() {
-            if (checkbox.checked) {
-                fields.style.display = 'block';
-                passengerSelect.disabled = true;
-                passengerSelect.value = '';
+    // Обработка кнопки добавления
+    container.addEventListener('click', function(e) {
+        if (e.target.closest('.add-btn')) {
+            const firstRow = container.querySelector('.passenger-row');
+            const newRow = firstRow.cloneNode(true);
+            newRow.querySelector('select').value = ''; // Очищаем выбор в новом поле
+
+            // Превращаем "+" в "-" для удаления
+            const btn = newRow.querySelector('.add-btn');
+            btn.className = 'btn btn-sm btn-danger remove-btn';
+            btn.title = 'Удалить пассажира';
+            btn.textContent = '−';
+
+            container.appendChild(newRow);
+        }
+    });
+
+    // Обработка кнопки удаления
+    container.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-btn')) {
+            if (container.children.length > 1) {
+                e.target.closest('.passenger-row').remove();
             } else {
-                fields.style.display = 'none';
-                passengerSelect.disabled = false;
+                alert('В бронировании должен быть минимум один пассажир');
             }
         }
-
-        checkbox.addEventListener('change', toggleFields);
-        toggleFields(); // Инициализация
     });
+});
 </script>
 {% endblock %}
