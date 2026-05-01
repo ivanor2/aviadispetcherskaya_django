@@ -1,31 +1,27 @@
 {% extends 'base.html' %}
-{% load static %}
-
 {% block title %}Все пассажиры{% endblock %}
-
 {% block content %}
-<div class="page-header">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
     <h1>👥 Пассажиры</h1>
-    <a href="#" class="btn btn-primary">➕ Зарегистрировать</a>
+    <a href="{% url 'app:passenger_create' %}" class="btn btn-primary">➕ Зарегистрировать</a>
 </div>
 
 <!-- Форма поиска -->
-<form method="get" class="search-form">
-    <div class="search-row">
-        <div class="search-field">
+<form method="get" class="search-form" style="margin-bottom: 2rem; background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div class="search-field" style="flex: 1; min-width: 200px;">
             <label for="search_type">Поиск:</label>
-            <select name="search_type" id="search_type" class="form-select">
-                <option value="passport">По паспорту</option>
-                <option value="name" {% if request.GET.search_type == 'name' %}selected{% endif %}>По ФИО</option>
+            <select name="search_type" id="search_type" class="form-select" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                <option value="passport" {% if search_form.search_type == 'passport' %}selected{% endif %}>По паспорту</option>
+                <option value="name" {% if search_form.search_type == 'name' %}selected{% endif %}>По ФИО</option>
             </select>
         </div>
-        <div class="search-field">
+        <div class="search-field" style="flex: 2; min-width: 250px;">
             <label for="query">Запрос:</label>
-            <input type="text" name="query" id="query" class="form-control"
-                   placeholder="Введите паспорт или ФИО..."
-                   value="{{ request.GET.query|default:'' }}">
+            <input type="text" name="query" id="query" class="form-control" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                   placeholder="Введите паспорт или ФИО..." value="{{ search_form.query|default:'' }}">
         </div>
-        <div class="search-actions">
+        <div class="search-actions" style="display: flex; gap: 0.5rem;">
             <button type="submit" class="btn btn-primary">🔍 Найти</button>
             <a href="{% url 'app:passenger_list' %}" class="btn btn-secondary">✕ Сбросить</a>
         </div>
@@ -35,14 +31,14 @@
 <!-- Список пассажиров -->
 {% if passengers %}
 <div class="passengers-table-container">
-    <table class="passengers-table">
+    <table class="passengers-table" style="width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
         <thead>
-            <tr>
-                <th>ФИО</th>
-                <th>Паспорт</th>
-                <th>Дата рождения</th>
-                <th>Бронирования</th>
-                <th>Действия</th>
+            <tr style="background: #f8f9fa;">
+                <th style="padding: 1rem; text-align: left;">ФИО</th>
+                <th style="padding: 1rem; text-align: left;">Паспорт</th>
+                <th style="padding: 1rem; text-align: left;">Дата рождения</th>
+                <th style="padding: 1rem; text-align: center;">Бронирования</th>
+                <th style="padding: 1rem; text-align: center;">Действия</th>
             </tr>
         </thead>
         <tbody>
@@ -52,25 +48,48 @@
                 <td>{{ passenger.passport_number }}</td>
                 <td>{{ passenger.birth_date|date:"d.m.Y" }}</td>
                 <td>
-                    {% if passenger.bookings_count %}
-                        <span class="badge">{{ passenger.bookings_count }}</span>
-                    {% else %}
-                        <span class="badge badge-empty">0</span>
-                    {% endif %}
+                    <span class="badge">{{ passenger.bookings_count|default:0 }}</span>
                 </td>
                 <td class="actions-cell">
-                    <a href="#" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
-                    <a href="#" class="btn btn-sm btn-warning" title="Редактировать">✏️</a>
+                    <a href="{% url 'app:passenger_detail' pk=passenger.id %}"
+                       class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
+
+                    {% if user_role == 'admin' %}
+                    <form method="post" action="{% url 'app:passenger_delete' pk=passenger.id %}"
+                          style="display:inline;"
+                          onsubmit="return confirm('⚠️ Удалить пассажира {{ passenger.full_name }}?\nЭто действие нельзя отменить.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger" title="Удалить">🗑️</button>
+                    </form>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<!-- Пагинация -->
+{% if is_paginated %}
+<div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 2rem;">
+    {% if page_obj.has_previous %}
+        <a href="?page=1{% if search_form.search_type %}&search_type={{ search_form.search_type }}{% endif %}{% if search_form.query %}&query={{ search_form.query }}{% endif %}" class="btn btn-sm btn-secondary">« Первая</a>
+        <a href="?page={{ page_obj.number|add:'-1' }}{% if search_form.search_type %}&search_type={{ search_form.search_type }}{% endif %}{% if search_form.query %}&query={{ search_form.query }}{% endif %}" class="btn btn-sm btn-secondary">‹ Назад</a>
+    {% endif %}
+
+    <span style="padding: 0.5rem 1rem; background: #fff; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.number|add:'1' }}{% if search_form.search_type %}&search_type={{ search_form.search_type }}{% endif %}{% if search_form.query %}&query={{ search_form.query }}{% endif %}" class="btn btn-sm btn-secondary">Вперёд ›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if search_form.search_type %}&search_type={{ search_form.search_type }}{% endif %}{% if search_form.query %}&query={{ search_form.query }}{% endif %}" class="btn btn-sm btn-secondary">Последняя »</a>
+    {% endif %}
+</div>
+{% endif %}
+
 {% else %}
-<div class="empty-state">
-    <p>Пассажиры не найдены</p>
-    <a href="#" class="btn btn-primary">➕ Зарегистрировать первого пассажира</a>
+<div class="empty-state" style="text-align: center; padding: 3rem; color: #666; background: #fff; border-radius: 8px; margin-top: 1rem;">
+    <p style="font-size: 1.2rem; margin-bottom: 1rem;">Пассажиры не найдены</p>
+    <a href="{% url 'app:passenger_create' %}" class="btn btn-primary">➕ Зарегистрировать первого пассажира</a>
 </div>
 {% endif %}
 {% endblock %}

@@ -110,18 +110,29 @@
                         <td>{{ booking.passenger.full_name }}</td>
                         <td>{{ booking.passenger.passport_number }}</td>
                         <td>{{ booking.booked_at|date:"d.m.Y H:i" }}</td>
-                        <td>
-                            {% if can_cancel_booking %}
-                            <form method="post" action="{% url 'app:booking_cancel' booking.id %}"
-                                  onsubmit="return confirm('Отменить бронирование?');">
-                                {% csrf_token %}
-                                <input type="hidden" name="flight_id" value="{{ flight.id }}">
-                                <button type="submit" class="btn btn-sm btn-danger">↩️ Возврат</button>
-                            </form>
-                            {% else %}
-                            <span class="text-muted">Только админ</span>
-                            {% endif %}
-                        </td>
+                      <td>
+                        {% if can_cancel_booking %}
+                        <!-- Кнопка возврата (для dispatcher/admin) -->
+                        <form method="post" action="{% url 'app:booking_cancel' booking.id %}"
+                              onsubmit="return confirm('Отменить бронирование? Места вернутся в продажу.');"
+                              style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="flight_id" value="{{ flight.id }}">
+                            <button type="submit" class="btn btn-sm btn-warning">↩️ Возврат</button>
+                        </form>
+                        {% endif %}
+
+                        {% if user_role == 'admin' %}
+                        <!-- Кнопка полного удаления (только admin) -->
+                        <form method="post" action="{% url 'app:booking_delete' booking_id=booking.id %}"
+                              onsubmit="return confirm('⚠️ ПОЛНОЕ УДАЛЕНИЕ бронирования?\nЭто действие нельзя отменить.');"
+                              style="display:inline; margin-left: 4px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="flight_id" value="{{ flight.id }}">
+                            <button type="submit" class="btn btn-sm btn-danger" title="Удалить запись">🗑️</button>
+                        </form>
+                        {% endif %}
+                    </td>
                     </tr>
                     {% endfor %}
                 </tbody>

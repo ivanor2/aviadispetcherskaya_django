@@ -67,8 +67,6 @@ class BookingForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        # Проверяем, что хотя бы один пассажир выбран (логика из JS, но для безопасности)
-        # Валидация пассажиров происходит во View через request.POST.getlist
         return cleaned_data
 
 

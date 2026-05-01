@@ -15,7 +15,7 @@ from app.controllers import (
     FlightController, PassengerController, BookingController, AuthController
 )
 from app.forms import (
-    LoginForm, RegisterForm, FlightSearchForm, PassengerSearchForm, FlightForm, BookingForm
+    LoginForm, RegisterForm, FlightSearchForm, PassengerSearchForm, FlightForm, BookingForm, PassengerForm
 )
 import requests
 
@@ -104,17 +104,28 @@ def _fetch_airports_map(request):
         pass
     return result
 
-def _parse_date(value):
-    """Парсит строку даты 'YYYY-MM-DD' в объект date. Если уже date/datetime — возвращает как есть."""
-    if isinstance(value, (date, datetime)):
+def _parse_datetime_safe(value):
+    """Безопасный парсинг datetime в объект datetime для шаблонов"""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
         return value
+    if isinstance(value, date) and not isinstance(value, datetime):
+        # Если это date без времени, добавляем полночь
+        return datetime.combine(value, time.min)
     if isinstance(value, str) and value:
         try:
-            return datetime.strptime(value[:10], '%Y-%m-%d').date()
+            # Пробуем разные форматы
+            for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d %H:%M']:
+                try:
+                    return datetime.strptime(value[:19].replace('Z', ''), fmt.replace('.%f', '') if '.' not in fmt else fmt)
+                except ValueError:
+                    continue
+            # Если не получилось — берём только дату
+            return datetime.strptime(value[:10], '%Y-%m-%d')
         except (ValueError, TypeError):
             pass
-    return value
-
+    return None
 
 def _parse_time(value):
     """Парсит строку времени 'HH:MM:SS' или 'HH:MM' в объект time. Если уже time — возвращает как есть."""
@@ -163,10 +174,24 @@ def _enrich_flights_data(flights, airlines_map, airports_map):
 
         # ✅ Конвертируем строки даты и времени в объекты Python,
         #    чтобы Django-фильтры |date:"d.m.Y" и |time:"H:i" работали корректно
-        flight['departure_date'] = _parse_date(flight.get('departure_date'))
+        flight['departure_date'] =_parse_datetime_safe(flight.get('departure_date'))
         flight['departure_time'] = _parse_time(flight.get('departure_time'))
 
     return flights
+
+    def _enrich_bookings_with_flight_numbers(bookings: list, access_token: str) -> list:
+        """Добавляет flight_number к каждому бронированию"""
+        enriched = []
+        for b in bookings:
+            flight_id = b.get('flight_id') or b.get('flightId')
+            if flight_id:
+                flight_info = FlightController.get_flight_short_info(flight_id, access_token)
+                if flight_info:
+                    b['flight_number'] = flight_info.get('flight_number')
+                    b['departure_icao'] = flight_info.get('departure_airport_icao')
+                    b['arrival_icao'] = flight_info.get('arrival_airport_icao')
+            enriched.append(_normalize_keys(b))
+        return enriched
 
 
 # ==========================================
@@ -495,38 +520,143 @@ class PassengerListView(TemplateView):
         context = super().get_context_data(**kwargs)
         context.update(_get_role_perms(self.request))
         token = _get_token(self.request)
-        page_num = self.request.GET.get('page', 1)
+
+        page_num = int(self.request.GET.get('page', 1)) if str(self.request.GET.get('page', 1)).isdigit() else 1
         search_type = self.request.GET.get('search_type', 'passport')
         query = self.request.GET.get('query', '').strip()
 
-        items = []
+        items, total, pages = [], 0, 1
+
         try:
             if query:
-                if search_type == 'passport':
-                    items = PassengerController.search_by_passport(query, token)
-                else:
-                    items = PassengerController.search_by_name(query, token)
+                # Поиск возвращает полный список → пагинацию делаем локально
+                items = PassengerController.search_by_passport(query,
+                                                               token) if search_type == 'passport' else PassengerController.search_by_name(
+                    query, token)
+                total = len(items)
+                pages = max(1, (total + 9) // 10)
+                # Срез для текущей страницы
+                start = (page_num - 1) * 10
+                items = items[start:start + 10]
             else:
+                # Используем пагинацию FastAPI напрямую
                 data = PassengerController.get_all_passengers(page=page_num, size=10, access_token=token)
                 items = data.get('items', [])
+                total = data.get('total', 0)
+                pages = data.get('pages', 1)
         except Exception:
             pass
 
-        paginator = Paginator(_normalize_keys(items), 10)
-        try:
-            page_obj = paginator.page(page_num)
-        except (PageNotAnInteger, EmptyPage):
-            page_obj = paginator.page(1)
+        # Нормализация и расчёт данных
+        passengers = _normalize_keys(items)
+        for p in passengers:
+            p['birth_date'] = _parse_datetime_safe(p.get('birth_date'))
+            p['passport_issue_date'] = _parse_datetime_safe(p.get('passport_issue_date'))
+            passport = p.get('passport_number') or p.get('passportNumber')
+            if passport:
+                p['bookings_count'] = len(BookingController.get_bookings_by_passport(passport, token))
+            else:
+                p['bookings_count'] = 0
+
+        # Формируем page_obj, понятный Django-шаблону
+        page_obj = {
+            'object_list': passengers,
+            'number': page_num,
+            'has_previous': page_num > 1,
+            'has_next': page_num < pages,
+            'paginator': {'num_pages': pages}
+        }
 
         context.update({
-            'passengers': page_obj.object_list,
+            'passengers': page_obj['object_list'],
             'page_obj': page_obj,
-            'is_paginated': page_obj.has_other_pages(),
+            'is_paginated': total > 10,
             'search_form': {'search_type': search_type, 'query': query}
         })
         return context
 
+class PassengerCreateView(FormView):
+    """Регистрация нового пассажира"""
+    template_name = 'passengers/create.html'
+    form_class = PassengerForm
+    success_url = reverse_lazy('app:passenger_list')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(_get_role_perms(self.request))
+        return context
+
+    def form_valid(self, form):
+        token = _get_token(self.request)
+        payload = {
+            'passportNumber': form.cleaned_data['passport_number'],
+            'passportIssuedBy': form.cleaned_data['passport_issued_by'],
+            'passportIssueDate': form.cleaned_data['passport_issue_date'].isoformat(),
+            'fullName': form.cleaned_data['full_name'],
+            'birthDate': form.cleaned_data['birth_date'].isoformat()
+        }
+        success, data, msg = PassengerController.create_passenger(payload, token)
+        if success:
+            messages.success(self.request, msg)
+            return super().form_valid(form)
+        messages.error(self.request, msg)
+        return self.form_invalid(form)
+
+
+class PassengerDetailView(TemplateView):
+    """Подробная информация о пассажире с историей бронирований"""
+    template_name = 'passengers/detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(_get_role_perms(self.request))
+        token = _get_token(self.request)
+        pk = kwargs.get('pk')
+
+        # 1. Получаем данные пассажира
+        headers = {'Authorization': f'Bearer {token}'} if token else {}
+        try:
+            resp = requests.get(f"{settings.API_BASE_URL}/passengers/{pk}", headers=headers, timeout=5)
+            if resp.status_code != 200:
+                messages.error(self.request, 'Пассажир не найден')
+                return redirect('app:passenger_list')
+            p_data = resp.json()
+        except Exception:
+            messages.error(self.request, 'Ошибка подключения к API')
+            return redirect('app:passenger_list')
+
+        p = _normalize_keys(p_data)
+        p['birth_date'] = _parse_datetime_safe(p.get('birth_date'))
+        p['passport_issue_date'] = _parse_datetime_safe(p.get('passport_issue_date'))
+
+        # 2. Получаем бронирования
+        passport = p.get('passport_number')
+        raw_bookings = BookingController.get_bookings_by_passport(passport, token) if passport else []
+
+        # 3. Обогащаем бронирования номерами рейсов
+        enriched_bookings = []
+        for b in raw_bookings:
+            b_norm = _normalize_keys(b)
+            # ✅ Парсим дату создания как datetime
+            b_norm['created_at'] = _parse_datetime_safe(b_norm.get('created_at') or b_norm.get('createdAt'))
+
+            # ✅ Подтягиваем номер рейса
+            flight_id = b_norm.get('flight_id')
+            if flight_id:
+                flight_info = FlightController.get_flight_by_id(flight_id, token)
+                if flight_info:
+                    f_norm = _normalize_keys(flight_info)
+                    b_norm['flight_number'] = f_norm.get('flight_number')
+                    b_norm['departure_icao'] = f_norm.get('departure_airport_icao')
+                    b_norm['arrival_icao'] = f_norm.get('arrival_airport_icao')
+            enriched_bookings.append(b_norm)
+
+        context.update({
+            'passenger': p,
+            'bookings': enriched_bookings,
+            'bookings_count': len(enriched_bookings)
+        })
+        return context
 class PassengerSearchView(FormView):
     template_name = 'passengers/search.html'
     form_class = PassengerSearchForm
@@ -667,3 +797,43 @@ class BookingFlightSelectView(View):
         except ValueError:
             messages.error(request, 'Некорректный идентификатор рейса')
             return redirect('app:index')
+
+class PassengerDeleteView(View):
+    """Удаление пассажира (только для admin)"""
+
+    def post(self, request, pk):
+        if request.session.get('user_role') != 'admin':
+            messages.error(request, 'Доступ запрещён. Требуются права администратора.')
+            return redirect('app:passenger_list')
+
+        token = _get_token(request)
+        success, msg = PassengerController.delete_passenger(pk, token)
+
+        if success:
+            messages.success(request, msg)
+        else:
+            messages.error(request, msg)
+        return redirect('app:passenger_list')
+
+
+class BookingDeleteView(View):
+    """Удаление бронирования (только для admin)"""
+
+    def post(self, request, booking_id):
+        if request.session.get('user_role') != 'admin':
+            messages.error(request, 'Доступ запрещён. Требуются права администратора.')
+            return redirect('app:flight_list')
+
+        token = _get_token(request)
+        flight_id = request.POST.get('flight_id')  # для редиректа обратно
+
+        success, msg = BookingController.delete_booking(booking_id, token)
+
+        if success:
+            messages.success(request, msg)
+        else:
+            messages.error(request, msg)
+
+        if flight_id:
+            return redirect('app:flight_detail', pk=flight_id)
+        return redirect('app:flight_list')

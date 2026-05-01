@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}{{ passenger.full_name }} — Данные пассажира{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>👤 {{ passenger.full_name }}</h1>
+    <div>
+        <a href="{% url 'app:passenger_list' %}" class="btn btn-secondary">← Назад к списку</a>
+    </div>
+</div>
+
+<div class="form-container">
+    <div class="passenger-detail-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+        <div class="detail-card">
+            <h3>🪪 Паспортные данные</h3>
+            <p><strong>Серия и номер:</strong> {{ passenger.passport_number }}</p>
+            <p><strong>Выдан:</strong> {{ passenger.passport_issued_by }}</p>
+            <p><strong>Дата выдачи:</strong> {{ passenger.passport_issue_date|date:"d.m.Y" }}</p>
+        </div>
+        <div class="detail-card">
+            <h3>📋 Личные данные</h3>
+            <p><strong>ФИО:</strong> {{ passenger.full_name }}</p>
+            <p><strong>Дата рождения:</strong> {{ passenger.birth_date|date:"d.m.Y" }}</p>
+            <p><strong>ID в системе:</strong> {{ passenger.id }}</p>
+        </div>
+    </div>
+    {% if user_role == 'admin' %}
+    <div style="margin: 1.5rem 0; padding-top: 1rem; border-top: 1px solid #eee;">
+        <form method="post" action="{% url 'app:passenger_delete' pk=passenger.id %}"
+              onsubmit="return confirm('⚠️ Вы уверены, что хотите удалить пассажира {{ passenger.full_name }}?\nВсе связанные бронирования также будут удалены.\nЭто действие нельзя отменить.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                🗑️ Удалить пассажира навсегда
+            </button>
+            <a href="{% url 'app:passenger_list' %}" class="btn btn-secondary">← Отмена</a>
+        </form>
+    </div>
+    {% endif %}
+
+    <hr style="margin: 2rem 0;">
+
+    <h3>🎫 Бронирования ({{ bookings|length }})</h3>
+    {% if bookings %}
+    <div class="passengers-table-container">
+        <table class="passengers-table">
+            <thead>
+                <tr>
+                    <th>Код бронирования</th>
+                    <th>Рейс</th>
+                    <th>Дата оформления</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in bookings %}
+                <tr>
+                    <td><strong>{{ b.booking_code }}</strong></td>
+                    <td>
+                        {% if b.flight_number %}
+                            <strong>{{ b.flight_number }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                {{ b.departure_icao|default:"?" }} → {{ b.arrival_icao|default:"?" }}
+                            </small>
+                        {% else %}
+                            <span class="text-muted">Рейс #{{ b.flight_id|default:"—" }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ b.created_at|date:"d.m.Y H:i" }}</td>
+                    <td><span class="badge badge-success">Активно</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>У пассажира пока нет бронирований</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

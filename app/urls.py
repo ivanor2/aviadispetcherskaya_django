@@ -24,11 +24,15 @@ urlpatterns = [
 
     # Пассажиры
     path('passengers/', views.PassengerListView.as_view(), name='passenger_list'),
+    path('passengers/create/', views.PassengerCreateView.as_view(), name='passenger_create'),
+    path('passengers/<int:pk>/delete/', views.PassengerDeleteView.as_view(), name='passenger_delete'),
+    path('passengers/<int:pk>/', views.PassengerDetailView.as_view(), name='passenger_detail'),
     path('passengers/search/', views.PassengerSearchView.as_view(), name='passenger_search'),
 
     # Бронирования
     path('bookings/create/<int:flight_id>/', views.BookingCreateView.as_view(), name='booking_create'),
     path('bookings/cancel/<int:booking_id>/', views.BookingCancelView.as_view(), name='booking_cancel'),
+    path('bookings/<int:booking_id>/delete/', views.BookingDeleteView.as_view(), name='booking_delete'),
     path('bookings/select/', views.BookingFlightSelectView.as_view(), name='booking_select'),
     path('bookings/add-connection/', views.BookingConnectionView.as_view(), name='booking_add_connection'),
 

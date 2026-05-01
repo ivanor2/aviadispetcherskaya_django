@@ -69,3 +69,33 @@ class PassengerController:
 
         except requests.RequestException as e:
             return False, None, f'Ошибка подключения к API: {e}'
+
+
+    @staticmethod
+    def get_passenger_by_id(passenger_id: int, access_token: str = None) -> dict | None:
+        headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
+        try:
+            response = requests.get(f"{PassengerController.BASE_URL}/{passenger_id}", headers=headers, timeout=5)
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except requests.RequestException:
+            return None
+
+
+    @staticmethod
+    def delete_passenger(passenger_id: int, access_token: str = None) -> tuple[bool, str]:
+        """Удаление пассажира по ID"""
+        headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
+        try:
+            response = requests.delete(
+                f"{PassengerController.BASE_URL}/{passenger_id}",
+                headers=headers,
+                timeout=10
+            )
+            if response.status_code == 204:
+                return True, 'Пассажир успешно удалён'
+            detail = response.json().get('detail', 'Ошибка при удалении')
+            return False, detail
+        except requests.RequestException as e:
+            return False, f'Ошибка подключения к API: {e}'

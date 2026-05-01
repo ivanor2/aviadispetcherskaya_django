@@ -90,3 +90,25 @@ class FlightController:
             return False, detail
         except requests.RequestException as e:
             return False, f'Сбой подключения к API: {e}'
+
+    @staticmethod
+    def get_flight_short_info(flight_id: int, access_token: str = None) -> dict | None:
+        """Получает краткую информацию о рейсе (номер, аэропорты)"""
+        headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
+        try:
+            response = requests.get(
+                f"{FlightController.BASE_URL}/{flight_id}",
+                headers=headers,
+                timeout=5
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    'id': data.get('id'),
+                    'flight_number': data.get('flightNumber') or data.get('flight_number'),
+                    'departure_airport_icao': data.get('departureAirportIcao') or data.get('departure_airport_icao'),
+                    'arrival_airport_icao': data.get('arrivalAirportIcao') or data.get('arrival_airport_icao'),
+                }
+            return None
+        except requests.RequestException:
+            return None
