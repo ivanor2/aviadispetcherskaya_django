@@ -1,5 +1,11 @@
+# app/controllers/flight_controller.py
 import requests
 from django.conf import settings
+from app.utils import parse_v2_validation_errors, normalize_api_response
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class FlightController:
     BASE_URL = f"{settings.API_BASE_URL}/flights"
@@ -7,11 +13,21 @@ class FlightController:
     @staticmethod
     def get_all_flights(page: int = 1, size: int = 20, access_token: str = None) -> dict:
         headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
+        params = {'page': page, 'size': size}
+
         try:
-            response = requests.get(FlightController.BASE_URL, params={'page': page, 'size': size}, headers=headers, timeout=10)
+            response = requests.get(FlightController.BASE_URL, params=params, headers=headers, timeout=10)
+
+            # 🔍 ЛОГИРОВАНИЕ ОТВЕТА (смотри в консоли Django!)
+            logger.info(f"📡 API v2 GET /flights -> Status: {response.status_code}")
+            if response.status_code != 200:
+                logger.warning(f"⚠️ API Error: {response.text[:200]}")
+
             response.raise_for_status()
-            return response.json()
-        except requests.RequestException:
+            return normalize_api_response(response.json(), page)
+
+        except requests.RequestException as e:
+            logger.error(f"❌ FlightController Connection Error: {e}")
             return {'items': [], 'total': 0, 'page': page, 'pages': 0}
 
     @staticmethod
@@ -27,22 +43,21 @@ class FlightController:
 
     @staticmethod
     def create_flight(payload: dict, access_token: str = None) -> tuple[bool, dict | None, str]:
-        headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'} if access_token else {}
+        headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
         try:
             response = requests.post(FlightController.BASE_URL, json=payload, headers=headers, timeout=10)
             if response.status_code in (200, 201):
                 return True, response.json(), 'Рейс успешно создан'
-            detail = response.json().get('detail', 'Ошибка создания')
-            return False, response.json(), detail
+            return False, response.json(), f'Ошибка API: {response.status_code}'
         except requests.RequestException as e:
-            return False, None, f'Ошибка подключения: {e}'
+            return False, None, str(e)
 
     @staticmethod
     def get_flight_with_passengers(flight_number: str, access_token: str = None) -> dict:
-        """Возвращает {'flight': {...}, 'passengers': [...]"""
         headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
         try:
-            response = requests.get(f"{FlightController.BASE_URL}/by-number/{flight_number}", headers=headers, timeout=5)
+            response = requests.get(f"{FlightController.BASE_URL}/by-number/{flight_number}", headers=headers,
+                                    timeout=5)
             if response.status_code == 200:
                 return response.json()
             return {'flight': None, 'passengers': []}
@@ -53,10 +68,12 @@ class FlightController:
     def search_by_arrival(query: str, access_token: str = None) -> list:
         headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
         try:
-            response = requests.get(f"{FlightController.BASE_URL}/search/by-arrival/{query}", headers=headers, timeout=5)
-            if response.status_code == 404: return []
-            response.raise_for_status()
-            return response.json()
+            response = requests.get(f"{FlightController.BASE_URL}/search/by-arrival/{query}", headers=headers,
+                                    timeout=5)
+            if response.status_code in (200, 404):
+                data = response.json()
+                return data if isinstance(data, list) else data.get('items', [])
+            return []
         except requests.RequestException:
             return []
 
@@ -71,36 +88,20 @@ class FlightController:
 
     @staticmethod
     def delete_all_flights(access_token: str = None) -> tuple[bool, str]:
-        """Удаляет все рейсы и связанные бронирования (требует роль admin)"""
         headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
         try:
-            response = requests.delete(
-                f"{FlightController.BASE_URL}/?confirm=true",
-                headers=headers,
-                timeout=15
-            )
+            response = requests.delete(f"{FlightController.BASE_URL}/?confirm=true", headers=headers, timeout=15)
             if response.status_code == 204:
-                return True, 'Все рейсы и бронирования успешно удалены'
-
-            # Безопасное чтение ошибки
-            try:
-                detail = response.json().get('detail', 'Ошибка удаления')
-            except ValueError:
-                detail = f'Ошибка API: {response.status_code}'
-            return False, detail
-        except requests.RequestException as e:
-            return False, f'Сбой подключения к API: {e}'
+                return True, 'Все рейсы удалены'
+            return False, response.json().get('detail', 'Ошибка удаления')
+        except requests.RequestException:
+            return False, 'Сбой подключения'
 
     @staticmethod
     def get_flight_short_info(flight_id: int, access_token: str = None) -> dict | None:
-        """Получает краткую информацию о рейсе (номер, аэропорты)"""
         headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
         try:
-            response = requests.get(
-                f"{FlightController.BASE_URL}/{flight_id}",
-                headers=headers,
-                timeout=5
-            )
+            response = requests.get(f"{FlightController.BASE_URL}/{flight_id}", headers=headers, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 return {
@@ -112,3 +113,4 @@ class FlightController:
             return None
         except requests.RequestException:
             return None
+

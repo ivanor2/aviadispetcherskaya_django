@@ -2,10 +2,10 @@
 import requests
 from django.conf import settings
 import json
+from app.utils import parse_v2_validation_errors, normalize_api_response
+
 
 class AuthController:
-    """Контроллер для работы с аутентификацией через API"""
-
     BASE_URL = f"{settings.API_BASE_URL}/auth"
 
     @staticmethod
@@ -18,15 +18,14 @@ class AuthController:
                 timeout=10
             )
 
-            # ✅ Логируем ответ для отладки
-            print(f"🔍 API Response: status={response.status_code}, body={response.text[:200]}")
-
             if response.status_code == 401:
                 return False, None, 'Неверный логин или пароль'
 
+            if response.status_code == 422:
+                return False, None, parse_v2_validation_errors(response)
+
             response.raise_for_status()
 
-            # ✅ Безопасный парсинг JSON
             if not response.text.strip():
                 return False, None, 'Пустой ответ от API'
 
@@ -34,19 +33,12 @@ class AuthController:
             return True, data, 'Вход выполнен успешно'
 
         except json.JSONDecodeError as e:
-            # ✅ Ловим ошибку парсинга JSON
-            print(f"❌ JSONDecodeError: {e}, response text: {response.text}")
             return False, None, f'Невалидный ответ от API: {response.text[:100]}'
-
         except requests.RequestException as e:
             return False, None, f'Ошибка подключения к API: {e}'
 
     @staticmethod
     def register(username: str, password: str) -> tuple[bool, dict | None, str]:
-        """
-        Регистрация нового пользователя
-        Returns: (success, user_data_or_errors, message)
-        """
         try:
             response = requests.post(
                 f"{AuthController.BASE_URL}/register",
@@ -56,11 +48,14 @@ class AuthController:
             )
 
             if response.status_code == 400:
-                return False, response.json(), 'Пользователь с таким именем уже существует'
+                detail = response.json().get('detail', 'Пользователь с таким именем уже существует')
+                return False, response.json(), detail
+
+            if response.status_code == 422:
+                return False, None, parse_v2_validation_errors(response)
 
             response.raise_for_status()
             data = response.json()
-
             return True, data, 'Пользователь зарегистрирован'
 
         except requests.RequestException as e:
@@ -68,27 +63,24 @@ class AuthController:
 
     @staticmethod
     def logout(access_token: str) -> bool:
-        """Выход из системы"""
         try:
             response = requests.post(
                 f"{AuthController.BASE_URL}/logout",
                 headers={'Authorization': f'Bearer {access_token}'},
                 timeout=5
             )
-            return response.status_code == 200
+            return response.status_code in (200, 204)
         except requests.RequestException:
             return False
 
     @staticmethod
     def get_current_user(access_token: str) -> dict | None:
-        """Получение информации о текущем пользователе"""
         try:
             response = requests.get(
                 f"{AuthController.BASE_URL}/me",
                 headers={'Authorization': f'Bearer {access_token}'},
                 timeout=5
             )
-
             if response.status_code == 200:
                 return response.json()
             return None
@@ -97,7 +89,6 @@ class AuthController:
 
     @staticmethod
     def refresh_token(refresh_token: str) -> tuple[bool, dict | None, str]:
-        """Обновление access токена"""
         try:
             response = requests.post(
                 f"{AuthController.BASE_URL}/refresh",
@@ -109,10 +100,27 @@ class AuthController:
             if response.status_code == 401:
                 return False, None, 'Токен невалиден'
 
+            if response.status_code == 422:
+                return False, None, parse_v2_validation_errors(response)
+
             response.raise_for_status()
             data = response.json()
-
             return True, data, 'Токен обновлён'
 
         except requests.RequestException as e:
             return False, None, f'Ошибка API: {e}'
+
+    @staticmethod
+    def get_all_users(page: int = 1, size: int = 20, access_token: str = None) -> dict:
+        headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
+        try:
+            response = requests.get(
+                f"{AuthController.BASE_URL}/users",
+                params={'page': page, 'size': size},
+                headers=headers,
+                timeout=10
+            )
+            response.raise_for_status()
+            return normalize_api_response(response.json(), page)
+        except requests.RequestException:
+            return {'items': [], 'total': 0, 'page': page, 'pages': 1}
