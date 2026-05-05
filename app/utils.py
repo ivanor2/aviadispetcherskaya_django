@@ -1,6 +1,10 @@
 # app/controllers/utils.py
+from datetime import datetime, date, time
+
 import requests
 import logging
+
+from django_app import settings
 
 logger = logging.getLogger(__name__)
 
