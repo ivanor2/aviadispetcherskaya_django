@@ -13,10 +13,12 @@ API_BASE_URL = config('API_BASE_URL', default='http://localhost:8001')
 
 # Сессии и аутентификация
 SESSION_COOKIE_NAME = 'sessionid'
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = False  # True для production с HTTPS
+SESSION_COOKIE_SECURE = False  # True только если у вас HTTPS
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-SESSION_COOKIE_AGE = 1800  # 30 минут
+SESSION_COOKIE_AGE = 3600
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -62,8 +64,7 @@ WSGI_APPLICATION = 'django_app.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.dummy',
     }
 }
 
