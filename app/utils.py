@@ -95,3 +95,152 @@ def parse_v2_errors(response) -> str:
         return response.json().get('detail', f'Ошибка {response.status_code}')
     except ValueError:
         return f'Ошибка {response.status_code}'
+
+# ==========================================
+# 🔧 Вспомогательные функции для Views
+# ==========================================
+
+def _normalize_keys(data):
+    if isinstance(data, dict):
+        result = {}
+        for k, v in data.items():
+            if k == 'id':
+                result['id'] = v
+            else:
+                snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in k]).lstrip('_')
+                result[snake_key] = _normalize_keys(v) if isinstance(v, (dict, list)) else v
+        return result
+    elif isinstance(data, list):
+        return [_normalize_keys(item) for item in data]
+    return data
+
+
+def _get_token(request):
+    return request.session.get('access_token')
+
+
+def _get_role_perms(request):
+    role = request.session.get('user_role', 'guest')
+    return {
+        'user_role': role,
+        'can_manage_flights': role in ['admin', 'dispatcher'],
+        'can_manage_passengers': role in ['admin', 'dispatcher'],
+        'can_manage_bookings': role in ['admin', 'dispatcher'],
+        'can_manage_airports': role == 'admin',
+        'can_view_reports': role in ['admin', 'dispatcher'],
+        'can_manage_users': role == 'admin',
+    }
+
+
+def _fetch_airlines_map(request):
+    token = _get_token(request)
+    headers = {'Authorization': f'Bearer {token}'} if token else {}
+    try:
+        resp = requests.get(f"{settings.API_BASE_URL}/airlines", headers=headers, timeout=5)
+        if resp.status_code == 200:
+            return {a.get('code', '').upper(): a.get('name', '') for a in resp.json()}
+    except Exception:
+        pass
+    return {}
+
+
+def _fetch_airports_map(request):
+    token = _get_token(request)
+    headers = {'Authorization': f'Bearer {token}'} if token else {}
+    result = {}
+    page = 1
+    size = 100
+    try:
+        while True:
+            resp = requests.get(
+                f"{settings.API_BASE_URL}/airports",
+                params={'page': page, 'size': size},
+                headers=headers,
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                break
+            data = resp.json()
+            items = data.get('items', [])
+            for a in items:
+                icao = (a.get('icao_code') or a.get('icaoCode') or '').strip().upper()
+                if icao:
+                    result[icao] = a
+            total_pages = data.get('pages', 1)
+            if page >= total_pages:
+                break
+            page += 1
+    except Exception:
+        pass
+    return result
+
+
+def _parse_datetime_safe(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return datetime.combine(value, time.min)
+    if isinstance(value, str) and value:
+        try:
+            for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d %H:%M']:
+                try:
+                    return datetime.strptime(value[:19].replace('Z', ''), fmt.replace('.%f', '') if '.' not in fmt else fmt)
+                except ValueError:
+                    continue
+            return datetime.strptime(value[:10], '%Y-%m-%d')
+        except (ValueError, TypeError):
+            pass
+    return None
+
+def _parse_time(value):
+    if isinstance(value, time):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return datetime.strptime(value[:5], '%H:%M').time()
+        except (ValueError, TypeError):
+            pass
+    return value
+
+
+def _enrich_flights_data(flights, airlines_map, airports_map):
+    for flight in flights:
+        if not flight:
+            continue
+
+        code = flight.get('airline_code', '').upper()
+        flight['airline_name'] = airlines_map.get(code, code)
+
+        dep_icao = (flight.get('departure_airport_icao') or flight.get('departureAirportIcao', '')).strip().upper()
+        arr_icao = (flight.get('arrival_airport_icao') or flight.get('arrivalAirportIcao', '')).strip().upper()
+
+        dep_data = airports_map.get(dep_icao)
+        arr_data = airports_map.get(arr_icao)
+
+        flight['departure_airport'] = dep_data or {'icao_code': dep_icao, 'name': dep_icao, 'city': '', 'country': ''}
+        flight['arrival_airport'] = arr_data or {'icao_code': arr_icao, 'name': arr_icao, 'city': '', 'country': ''}
+
+        flight['departure_airport_name'] = (flight['departure_airport'].get('name') or '').strip() or dep_icao
+        flight['arrival_airport_name'] = (flight['arrival_airport'].get('name') or '').strip() or arr_icao
+
+        flight['departure_date'] = _parse_datetime_safe(flight.get('departure_date'))
+        flight['departure_time'] = _parse_time(flight.get('departure_time'))
+
+    return flights
+
+
+def _enrich_bookings_with_flight_numbers(bookings: list, access_token: str) -> list:
+    from app.controllers import FlightController
+    enriched = []
+    for b in bookings:
+        flight_id = b.get('flight_id') or b.get('flightId')
+        if flight_id:
+            flight_info = FlightController.get_flight_short_info(flight_id, access_token)
+            if flight_info:
+                b['flight_number'] = flight_info.get('flight_number')
+                b['departure_icao'] = flight_info.get('departure_airport_icao')
+                b['arrival_icao'] = flight_info.get('arrival_airport_icao')
+        enriched.append(_normalize_keys(b))
+    return enriched
