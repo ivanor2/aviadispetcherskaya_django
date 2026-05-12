@@ -125,13 +125,15 @@ def _get_token(request):
 
 def _get_role_perms(request):
     role = request.session.get('user_role', 'guest')
+    is_guest = role == 'guest'
     return {
         'user_role': role,
-        'can_manage_flights': role in ['admin', 'dispatcher'],
-        'can_manage_passengers': role in ['admin', 'dispatcher'],
-        'can_manage_bookings': role in ['admin', 'dispatcher'],
+        'is_guest': is_guest,
+        'can_manage_flights': not is_guest and role in ['admin', 'dispatcher'],
+        'can_manage_passengers': not is_guest and role in ['admin', 'dispatcher'],
+        'can_manage_bookings': not is_guest and role in ['admin', 'dispatcher'],
         'can_manage_airports': role == 'admin',
-        'can_view_reports': role in ['admin', 'dispatcher'],
+        'can_view_reports': not is_guest and role in ['admin', 'dispatcher'],
         'can_manage_users': role == 'admin',
     }
 

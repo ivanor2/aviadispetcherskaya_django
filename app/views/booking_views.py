@@ -13,6 +13,12 @@ class BookingCreateView(FormView):
     form_class = BookingForm
     success_url = reverse_lazy('app:flight_list')
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.session.get('user_role') == 'guest':
+            messages.error(request, 'Доступ запрещён. Гости не могут продавать билеты.')
+            return redirect('app:index')
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(_get_role_perms(self.request))

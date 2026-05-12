@@ -1,2 +1,19 @@
-Nothing needs to be added to .gitignore since only a README.md file was added, which is a source/config file and not a build artifact, dependency, or temporary file.
+```gitignore
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django specific
+*.pyc
+__pycache__/
+
+# Logs
+*.log
+
+# Environment variables
 .env
+.env.local
+.env.*
+```

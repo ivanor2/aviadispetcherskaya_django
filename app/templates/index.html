@@ -20,6 +20,16 @@
                 <div class="stat-value">{{ active_flights|default:0 }}</div>
                 <div class="stat-label">Активных рейсов</div>
             </div>
+            {% if is_guest %}
+            <div class="stat-card">
+                <div class="stat-value">Нет доступа</div>
+                <div class="stat-label">Пассажиров</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">Нет доступа</div>
+                <div class="stat-label">Продано билетов</div>
+            </div>
+            {% else %}
             <div class="stat-card">
                 <div class="stat-value">{{ total_passengers|default:0 }}</div>
                 <div class="stat-label">Пассажиров</div>
@@ -28,6 +38,7 @@
                 <div class="stat-value">{{ total_bookings|default:0 }}</div>
                 <div class="stat-label">Продано билетов</div>
             </div>
+            {% endif %}
         </div>
     </section>
 
