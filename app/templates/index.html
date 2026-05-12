@@ -72,10 +72,12 @@
             </a>
             {% endif %}
 
+            {% if can_manage_bookings %}
             <a href="{% url 'app:passenger_list' %}" class="quick-action">
                 <span class="quick-action-icon">👥</span>
                 <span>Все пассажиры</span>
             </a>
+            {% endif %}
 
             {% if can_manage_airports %}
             <a href="#" class="quick-action role-admin-only">
