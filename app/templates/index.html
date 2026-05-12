@@ -20,6 +20,16 @@
                 <div class="stat-value">{{ active_flights|default:0 }}</div>
                 <div class="stat-label">Активных рейсов</div>
             </div>
+            {% if is_guest %}
+            <div class="stat-card">
+                <div class="stat-value">Нет доступа</div>
+                <div class="stat-label">Пассажиров</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">Нет доступа</div>
+                <div class="stat-label">Продано билетов</div>
+            </div>
+            {% else %}
             <div class="stat-card">
                 <div class="stat-value">{{ total_passengers|default:0 }}</div>
                 <div class="stat-label">Пассажиров</div>
@@ -28,6 +38,7 @@
                 <div class="stat-value">{{ total_bookings|default:0 }}</div>
                 <div class="stat-label">Продано билетов</div>
             </div>
+            {% endif %}
         </div>
     </section>
 
@@ -61,10 +72,12 @@
             </a>
             {% endif %}
 
+            {% if can_manage_bookings %}
             <a href="{% url 'app:passenger_list' %}" class="quick-action">
                 <span class="quick-action-icon">👥</span>
                 <span>Все пассажиры</span>
             </a>
+            {% endif %}
 
             {% if can_manage_airports %}
             <a href="#" class="quick-action role-admin-only">

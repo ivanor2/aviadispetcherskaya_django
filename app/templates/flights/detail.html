@@ -69,7 +69,7 @@
         </div>
 
         <div class="action-buttons">
-            {% if flight.free_seats > 0 %}
+            {% if flight.free_seats > 0 and can_manage_bookings %}
             <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-primary btn-lg">🎫 Продать билет</a>
             {% endif %}
             {% if is_admin and flight.id %}
@@ -89,9 +89,11 @@
 
     <!-- Пассажиры на рейсе -->
     <section class="passengers-section">
-        <h3>👥 Пассажиры на рейсе ({{ passengers|length }})</h3>
+        <h3>👥 Пассажиры на рейсе</h3>
 
-        {% if passengers %}
+        {% if is_guest %}
+        <p class="empty-state">Нет доступа к информации о пассажирах</p>
+        {% elif passengers %}
        <div class="passengers-table-container">
             <table class="passengers-table">
                 <thead>
@@ -141,16 +143,6 @@
         {% else %}
         <p class="empty-state">На этот рейс ещё не куплено ни одного билета</p>
         {% endif %}
-        {% if can_cancel_booking %}
-        <form method="post" action="{% url 'app:booking_cancel' booking.id %}" onsubmit="return confirm('Отменить бронирование?');">
-        {% csrf_token %}
-        <input type="hidden" name="flight_id" value="{{ flight.id }}">
-        <button type="submit" class="btn btn-sm btn-danger">↩️ Возврат</button>
-    </form>
-    {% else %}
-    <span class="text-muted">Только админ</span>
-    {% endif %}
-</td>
     </section>
 
 </div>
