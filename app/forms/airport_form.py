@@ -1,20 +1,19 @@
 from django import forms
-from app.models import Airport
 import re
 
-
-class AirportForm(forms.ModelForm):
-    """Форма добавления/редактирования аэропорта"""
-
-    class Meta:
-        model = Airport
-        fields = ['icao_code', 'name', 'country', 'city']
-
+class AirportForm(forms.Form):
+    icao_code = forms.CharField(
+        max_length=4, min_length=2,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UUSS', 'pattern': '[A-Z]{2,4}'}),
+        label="ICAO код"
+    )
+    name = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Шереметьево'}),
+        label="Название аэропорта"
+    )
     def clean_icao_code(self):
-        """Валидация ICAO-кода: ровно 4 буквы латиницы"""
         code = self.cleaned_data.get('icao_code', '').upper()
-        if not re.match(r'^[A-Z]{4}$', code):
-            raise forms.ValidationError(
-                'ICAO-код должен состоять из 4 букв латиницы'
-            )
+        if not re.match(r'^[A-Z]{2,4}$', code):
+            raise forms.ValidationError('ICAO-код должен состоять из 2-4 заглавных латинских букв')
         return code

@@ -124,3 +124,23 @@ class AuthController:
             return normalize_api_response(response.json(), page)
         except requests.RequestException:
             return {'items': [], 'total': 0, 'page': page, 'pages': 1}
+
+    @staticmethod
+    def update_user_role(user_id: int, new_role: str, access_token: str = None) -> tuple[bool, dict | None, str]:
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        } if access_token else {'Content-Type': 'application/json'}
+        try:
+            response = requests.put(
+                f"{AuthController.BASE_URL}/{user_id}/role",
+                json={'role': new_role},
+                headers=headers,
+                timeout=5
+            )
+            if response.status_code in (200, 204):
+                return True, response.json(), 'Роль пользователя успешно обновлена'
+            detail = response.json().get('detail', f'Ошибка API: {response.status_code}')
+            return False, response.json(), detail
+        except requests.RequestException as e:
+            return False, None, f'Сбой подключения к API: {e}'

@@ -43,57 +43,57 @@
     </section>
 
     <!-- Быстрые действия (ролевой доступ) -->
-    <section class="quick-actions-section">
-        <h2>⚡ Быстрые действия</h2>
-        <div class="quick-actions">
+    <!-- ... выше секция статистики ... -->
+     <section class="quick-actions-section">
+         <h2>⚡ Быстрые действия</h2>
+         <div class="quick-actions">
             {% if can_manage_flights %}
-            <a href="{% url 'app:flight_create' %}" class="quick-action role-dispatcher-only role-admin-only">
-                <span class="quick-action-icon">➕</span>
-                <span>Добавить рейс</span>
-            </a>
+             <a href="{% url 'app:flight_create' %}" class="quick-action role-dispatcher-only role-admin-only">
+                 <span class="quick-action-icon">➕</span>
+                 <span>Добавить рейс</span>
+             </a>
             {% endif %}
 
             {% if can_manage_passengers %}
-            <a href="{% url 'app:passenger_search' %}" class="quick-action role-dispatcher-only role-admin-only">
-                <span class="quick-action-icon">🔍</span>
-                <span>Найти пассажира</span>
-            </a>
+             <a href="{% url 'app:passenger_search' %}" class="quick-action role-dispatcher-only role-admin-only">
+                 <span class="quick-action-icon">🔍</span>
+                 <span>Найти пассажира</span>
+             </a>
             {% endif %}
 
-            <a href="{% url 'app:flight_list' %}" class="quick-action">
-                <span class="quick-action-icon">🔎</span>
-                <span>Поиск рейса</span>
-            </a>
-
-            {% if can_view_reports %}
-            <a href="#" class="quick-action role-dispatcher-only role-admin-only">
-                <span class="quick-action-icon">📊</span>
-                <span>Статистика</span>
-            </a>
-            {% endif %}
+             <a href="{% url 'app:flight_list' %}" class="quick-action">
+                 <span class="quick-action-icon">🔎</span>
+                 <span>Поиск рейса</span>
+             </a>
 
             {% if can_manage_bookings %}
-            <a href="{% url 'app:passenger_list' %}" class="quick-action">
-                <span class="quick-action-icon">👥</span>
-                <span>Все пассажиры</span>
-            </a>
+             <a href="{% url 'app:passenger_list' %}" class="quick-action">
+                 <span class="quick-action-icon">👥</span>
+                 <span>Все пассажиры</span>
+             </a>
             {% endif %}
 
-            {% if can_manage_airports %}
-            <a href="#" class="quick-action role-admin-only">
+             <a href="{% url 'app:airport_list' %}" class="quick-action role-admin-only">
                 <span class="quick-action-icon">🗂️</span>
-                <span>Управление аэропортами</span>
-            </a>
-            {% endif %}
+            <span>Управление аэропортами</span>
+        </a>
 
-            {% if can_manage_users %}
-            <a href="#" class="quick-action role-admin-only">
-                <span class="quick-action-icon">👤</span>
-                <span>Пользователи</span>
-            </a>
-            {% endif %}
-        </div>
-    </section>
+<!-- Было: <a href="#" class="quick-action role-admin-only">👤 Пользователи</a> -->
+<!-- Стало: -->
+<a href="{% url 'app:user_list' %}" class="quick-action role-admin-only">
+    <span class="quick-action-icon">👤</span>
+    <span>Пользователи</span>
+</a>
+
+<!-- Добавляем Авиакомпании (опционально, но полезно) -->
+<a href="{% url 'app:airline_list' %}" class="quick-action role-admin-only">
+    <span class="quick-action-icon">✈️</span>
+    <span>Авиакомпании</span>
+</a>
+
+         </div>
+     </section>
+<!-- ... ниже секция быстрой продажи (без inline стилей, они теперь в main.css) ... -->
         {% if can_manage_bookings %}
     <section class="quick-ticket-sale-section" style="margin-top: 2rem; margin-bottom: 2rem;">
         <div class="form-container" style="padding: 1.5rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">

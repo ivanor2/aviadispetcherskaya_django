@@ -5,9 +5,13 @@ from app.views import (
     LoginView, RegisterView, LogoutView,
     FlightListView, FlightSearchView, FlightCreateView, FlightDetailView, FlightDeleteView, FlightDeleteAllView,
     PassengerListView, PassengerCreateView, PassengerDetailView, PassengerSearchView, PassengerDeleteView,
-    BookingCreateView, BookingConnectionView, BookingCancelView, BookingFlightSelectView, BookingDeleteView
+    BookingCreateView, BookingConnectionView, BookingCancelView, BookingFlightSelectView, BookingDeleteView,
+    UserManagementView, UserEditView
 )
 from django.contrib.auth import views as auth_views
+
+from app.views.airline_views import AirlineListView, AirlineCreateView, AirlineUpdateView, AirlineDeleteView
+from app.views.airport_views import AirportListView, AirportCreateView, AirportUpdateView, AirportDeleteView
 
 app_name = 'app'
 
@@ -39,4 +43,20 @@ urlpatterns = [
     path('bookings/<int:booking_id>/delete/', BookingDeleteView.as_view(), name='booking_delete'),
     path('bookings/select/', BookingFlightSelectView.as_view(), name='booking_select'),
     path('bookings/add-connection/', BookingConnectionView.as_view(), name='booking_add_connection'),
+
+    # Управление пользователями (только admin)
+    path('users/', UserManagementView.as_view(), name='user_list'),
+    path('users/<int:pk>/edit/', UserEditView.as_view(), name='user_edit'),
+
+    # Управление авиакомпаниями (только admin)
+    path('airlines/', AirlineListView.as_view(), name='airline_list'),
+    path('airlines/create/', AirlineCreateView.as_view(), name='airline_create'),
+    path('airlines/<str:code>/edit/', AirlineUpdateView.as_view(), name='airline_update'),
+    path('airlines/<str:code>/delete/', AirlineDeleteView.as_view(), name='airline_delete'),
+
+    # Управление аэропортами (только admin)
+    path('airports/', AirportListView.as_view(), name='airport_list'),
+    path('airports/create/', AirportCreateView.as_view(), name='airport_create'),
+    path('airports/<int:pk>/edit/', AirportUpdateView.as_view(), name='airport_update'),
+    path('airports/<int:pk>/delete/', AirportDeleteView.as_view(), name='airport_delete'),
 ]

@@ -4,11 +4,12 @@ from .passenger_form import PassengerForm, PassengerSearchForm
 from .booking_form import BookingForm, BookingCancelForm
 from .airport_form import AirportForm
 from .auth_form import LoginForm, RegisterForm
-
+from .airline_form import AirlineForm
 __all__ = [
     'FlightForm', 'FlightSearchForm',
     'PassengerForm', 'PassengerSearchForm',
     'BookingForm', 'BookingCancelForm',
     'AirportForm',
-    'LoginForm', 'RegisterForm'
+    'LoginForm', 'RegisterForm',
+    'AirlineForm'
 ]
