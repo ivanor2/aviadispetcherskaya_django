@@ -44,23 +44,21 @@
         <tbody>
             {% for passenger in passengers %}
             <tr>
-                <td><strong>{{ passenger.full_name }}</strong></td>
-                <td>{{ passenger.passport_number }}</td>
-                <td>{{ passenger.birth_date|date:"d.m.Y" }}</td>
-                <td>
+               <td data-label="ФИО"><strong>{{ passenger.full_name }}</strong></td>
+                <td data-label="Паспорт">{{ passenger.passport_number }}</td>
+                <td data-label="Дата рождения">{{ passenger.birth_date|date:"d.m.Y" }}</td>
+                <td data-label="Бронирования">
                     <span class="badge">{{ passenger.bookings_count|default:0 }}</span>
                 </td>
-                <td class="actions-cell">
-                    <a href="{% url 'app:passenger_detail' pk=passenger.id %}"
-                       class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
-
+                <td class="actions-cell" data-label="Действия">
+                    <a href="{% url 'app:passenger_detail' pk=passenger.id %}" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
                     {% if user_role == 'admin' %}
-                    <form method="post" action="{% url 'app:passenger_delete' pk=passenger.id %}"
-                          style="display:inline;"
-                          onsubmit="return confirm('⚠️ Удалить пассажира {{ passenger.full_name }}?\nЭто действие нельзя отменить.');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger" title="Удалить">🗑️</button>
-                    </form>
+                        <form method="post" action="{% url 'app:passenger_delete' pk=passenger.id %}"
+                              style="display:inline;"
+                              onsubmit="return confirm('⚠️ Удалить пассажира {{ passenger.full_name }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" title="Удалить">🗑️</button>
+                        </form>
                     {% endif %}
                 </td>
             </tr>

@@ -98,3 +98,127 @@ tr:hover { background: #f8f9fa; }
 .quick-ticket-sale-section form { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
 .quick-ticket-sale-section .form-group { flex: 1; min-width: 250px; }
 .quick-ticket-sale-section label { font-weight: 500; margin-bottom: 0.5rem; display: block; color: #333; }
+
+.table-responsive {
+    overflow-x: visible;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.table-responsive table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-responsive th,
+.table-responsive td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.table-responsive th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+.table-responsive tr:hover {
+    background: #f8f9fa;
+}
+
+/* 📱 МОБИЛЬНЫЕ - превращаем таблицу в карточки */
+@media (max-width: 768px) {
+    .table-responsive table,
+    .table-responsive thead,
+    .table-responsive tbody,
+    .table-responsive th,
+    .table-responsive td,
+    .table-responsive tr {
+        display: block;
+    }
+
+    /* Скрываем заголовок таблицы */
+    .table-responsive thead {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    /* Каждая строка - карточка */
+    .table-responsive tr {
+        margin-bottom: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    /* Ячейки как строки в карточке */
+    .table-responsive td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .table-responsive td:last-child {
+        border-bottom: none;
+    }
+
+    /* Добавляем labels перед данными */
+    .table-responsive td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-weight: 600;
+        color: #666;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    /* Заголовок карточки (первая ячейка) */
+    .table-responsive td:first-child {
+        background: #f8f9fa;
+        font-weight: bold;
+        font-size: 1.1rem;
+        padding-left: 1rem;
+        text-align: left;
+    }
+
+    .table-responsive td:first-child::before {
+        display: none;
+    }
+
+    /* Кнопки действий */
+    .table-responsive .actions-cell {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+        padding: 1rem;
+        background: #f8f9fa;
+    }
+
+    .table-responsive .actions-cell .btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* 📱 Очень маленькие экраны */
+@media (max-width: 480px) {
+    .table-responsive td {
+        padding-left: 45%;
+        font-size: 0.9rem;
+    }
+
+    .table-responsive td::before {
+        font-size: 0.85rem;
+    }
+}

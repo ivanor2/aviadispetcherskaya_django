@@ -123,6 +123,9 @@
                             <button type="submit" class="btn btn-sm btn-warning">↩️ Возврат</button>
                         </form>
                         {% endif %}
+                          <a href="{% url 'app:booking_ticket_pdf' booking.id %}" class="btn btn-sm btn-secondary" target="_blank" title="Скачать PDF">
+                            📄 PDF
+                          </a>
 
                         {% if user_role == 'admin' %}
                         <!-- Кнопка полного удаления (только admin) -->

@@ -12,6 +12,7 @@ from django.contrib.auth import views as auth_views
 
 from app.views.airline_views import AirlineListView, AirlineCreateView, AirlineUpdateView, AirlineDeleteView
 from app.views.airport_views import AirportListView, AirportCreateView, AirportUpdateView, AirportDeleteView
+from app.views.booking_views import BookingTicketPdfView
 
 app_name = 'app'
 
@@ -43,6 +44,7 @@ urlpatterns = [
     path('bookings/<int:booking_id>/delete/', BookingDeleteView.as_view(), name='booking_delete'),
     path('bookings/select/', BookingFlightSelectView.as_view(), name='booking_select'),
     path('bookings/add-connection/', BookingConnectionView.as_view(), name='booking_add_connection'),
+    path('bookings/<int:booking_id>/ticket/', BookingTicketPdfView.as_view(), name='booking_ticket_pdf'),
 
     # Управление пользователями (только admin)
     path('users/', UserManagementView.as_view(), name='user_list'),

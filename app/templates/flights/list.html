@@ -60,35 +60,28 @@
         <tbody>
             {% for flight in flights %}
             <tr class="flight-row {% if flight.free_seats == 0 %}sold-out{% endif %}">
-                <td><strong>{{ flight.flight_number }}</strong></td>
-
-                <!-- ✅ Используем имя авиакомпании -->
-                <td>{{ flight.airline_name }}</td>
-
-                <td>
+                 <td data-label="Рейс"><strong>{{ flight.flight_number }}</strong></td>
+                <td data-label="Авиакомпания">{{ flight.airline_name }}</td>
+                <td data-label="Маршрут">
                     <span class="route-mini">
-                        <!-- ✅ Используем имена аэропортов -->
                         {{ flight.departure_airport_name }}
                         <span class="arrow">→</span>
                         {{ flight.arrival_airport_name }}
                     </span>
                 </td>
-
-                <td>
+                <td data-label="Дата и время">
                     {{ flight.departure_date|date:"d.m.Y" }}<br>
                     <small>{{ flight.departure_time|time:"H:i" }}</small>
                 </td>
-                <td>
+                <td data-label="Места">
                     <span class="seats-badge {% if flight.free_seats == 0 %}sold-out{% endif %}">
                         {{ flight.free_seats }}/{{ flight.total_seats }}
                     </span>
                 </td>
-                <td class="actions-cell">
+                <td class="actions-cell" data-label="Действия">
                     {% if flight.id %}
                         <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
                         <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-sm btn-success" title="Продать билет" {% if flight.free_seats == 0 %}disabled{% endif %}>🎫</a>
-                    {% else %}
-                        <span class="text-muted">ID недоступен</span>
                     {% endif %}
                 </td>
             </tr>

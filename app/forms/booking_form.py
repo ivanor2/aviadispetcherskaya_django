@@ -15,6 +15,43 @@ class BookingForm(forms.Form):
         label="Рейс для пересадки (опционально)"
     )
 
+    baggage_allowed = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Багаж включен?",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+    payment_type = forms.ChoiceField(
+        choices=[('card', 'Карта'), ('cash', 'Наличные'), ('online', 'Онлайн')],
+        label="Способ оплаты",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    base_price = forms.DecimalField(
+        label="Базовая цена",
+        max_digits=10,
+        decimal_places=2,
+        initial=5000.00,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+
+    tax = forms.DecimalField(
+        label="Налог",
+        max_digits=10,
+        decimal_places=2,
+        initial=500.00,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+
+    additional_fees = forms.DecimalField(
+        label="Доп. сборы",
+        max_digits=10,
+        decimal_places=2,
+        initial=0.00,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+
     def __init__(self, *args, access_token=None, current_flight_id=None, **kwargs):
         super().__init__(*args, **kwargs)
 

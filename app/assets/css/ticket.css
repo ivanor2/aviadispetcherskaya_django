@@ -1,0 +1,238 @@
+/* app/assets/css/ticket.css */
+/* Профессиональный шаблон авиабилета в стиле IATA */
+
+@page {
+    size: A4;
+    margin: 0;
+}
+
+body {
+    font-family: 'DejaVu Sans', 'Courier New', monospace;
+    font-size: 10pt;
+    margin: 0;
+    padding: 15mm;
+    background: #fff;
+    color: #000;
+    line-height: 1.4;
+}
+
+/* Контейнер билета с рамкой */
+.ticket {
+    border: 2pt solid #000;
+    padding: 10mm;
+    position: relative;
+}
+
+/* Заголовок */
+.ticket-header {
+    border-bottom: 1pt solid #000;
+    padding-bottom: 5mm;
+    margin-bottom: 5mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.ticket-title {
+    font-size: 14pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.ticket-subtitle {
+    font-size: 9pt;
+    color: #333;
+    margin: 2pt 0 0 0;
+}
+
+.airline-logo {
+    font-size: 18pt;
+    font-weight: bold;
+    text-align: right;
+    border: 1pt solid #000;
+    padding: 3mm 8mm;
+    background: #f5f5f5;
+}
+
+/* Блок с кодом бронирования */
+.booking-ref {
+    text-align: right;
+    margin-bottom: 5mm;
+}
+
+.booking-label {
+    font-size: 8pt;
+    color: #555;
+    text-transform: uppercase;
+}
+
+.booking-code {
+    font-size: 16pt;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3pt;
+    background: #000;
+    color: #fff;
+    padding: 2mm 8mm;
+    display: inline-block;
+    margin-top: 2pt;
+}
+
+/* Секции билета */
+.section {
+    margin-bottom: 8mm;
+    page-break-inside: avoid;
+}
+
+.section-title {
+    font-size: 9pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 1pt dashed #000;
+    padding-bottom: 2pt;
+    margin-bottom: 4pt;
+    color: #000;
+}
+
+/* Таблица с данными */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+}
+
+.data-table td {
+    padding: 2pt 4pt;
+    vertical-align: top;
+    border-bottom: 1pt dotted #ccc;
+}
+
+.data-table td.label {
+    width: 35%;
+    font-size: 8pt;
+    color: #555;
+    text-transform: uppercase;
+    font-weight: normal;
+}
+
+.data-table td.value {
+    font-weight: bold;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Маршрут: крупное отображение */
+.route-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f9f9f9;
+    border: 1pt solid #000;
+    padding: 4mm;
+    margin: 3mm 0;
+}
+
+.route-point {
+    text-align: center;
+    flex: 1;
+}
+
+.route-point .airport-code {
+    font-size: 18pt;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2pt;
+}
+
+.route-point .airport-name {
+    font-size: 8pt;
+    color: #555;
+    margin-top: 2pt;
+}
+
+.route-point .datetime {
+    font-size: 9pt;
+    margin-top: 3pt;
+    font-weight: bold;
+}
+
+.route-arrow {
+    font-size: 20pt;
+    color: #000;
+    padding: 0 10pt;
+}
+
+/* Блок с ценами */
+.price-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.price-table td {
+    padding: 3pt 5pt;
+    border-bottom: 1pt dotted #ccc;
+}
+
+.price-table td.label {
+    text-align: right;
+    font-size: 8pt;
+    color: #555;
+    text-transform: uppercase;
+    width: 60%;
+}
+
+.price-table td.amount {
+    text-align: right;
+    font-weight: bold;
+    width: 40%;
+}
+
+.price-table tr.total td {
+    border-top: 2pt solid #000;
+    border-bottom: none;
+    font-size: 11pt;
+    padding-top: 5pt;
+}
+
+.price-table tr.total td.label {
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* Футер билета */
+.ticket-footer {
+    border-top: 1pt solid #000;
+    padding-top: 5mm;
+    margin-top: 10mm;
+    font-size: 8pt;
+    color: #555;
+    text-align: center;
+}
+
+.ticket-footer .disclaimer {
+    margin-bottom: 3pt;
+}
+
+.ticket-footer .barcode {
+    font-family: 'Courier New', monospace;
+    font-size: 10pt;
+    letter-spacing: 1pt;
+    margin-top: 5pt;
+    background: #f0f0f0;
+    padding: 2mm;
+    display: inline-block;
+}
+
+/* Адаптация для reportlab (статичные стили) */
+.no-break {
+    page-break-inside: avoid;
+}
+
+.right { text-align: right; }
+.center { text-align: center; }
+.bold { font-weight: bold; }
+.upper { text-transform: uppercase; }
+.muted { color: #555; }
