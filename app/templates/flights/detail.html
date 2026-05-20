@@ -86,67 +86,73 @@
 
         </div>
     </section>
-
     <!-- Пассажиры на рейсе -->
-    <section class="passengers-section">
-        <h3>👥 Пассажиры на рейсе</h3>
+<section class="passengers-section">
+     <h3>👥 Пассажиры на рейсе ({{ passengers|length }})</h3>
 
-        {% if is_guest %}
-        <p class="empty-state">Нет доступа к информации о пассажирах</p>
-        {% elif passengers %}
-       <div class="passengers-table-container">
-            <table class="passengers-table">
-                <thead>
-                    <tr>
-                        <th>Код бронирования</th>
-                        <th>ФИО пассажира</th>
-                        <th>Паспорт</th>
-                        <th>Дата бронирования</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for booking in passengers %}
-                    <tr>
-                        <td><strong>{{ booking.booking_code }}</strong></td>
-                        <td>{{ booking.passenger.full_name }}</td>
-                        <td>{{ booking.passenger.passport_number }}</td>
-                        <td>{{ booking.booked_at|date:"d.m.Y H:i" }}</td>
-                      <td>
+    {% if is_guest %}
+     <p class="empty-state">Нет доступа к информации о пассажирах</p>
+    {% elif passengers %}
+    <div class="passengers-table-container">
+         <table class="passengers-table">
+             <thead>
+                 <tr>
+                     <th>Код бронирования</th>
+                     <th>ФИО пассажира</th>
+                     <th>Паспорт</th>
+                     <th>Цена</th>
+                     <th>Класс</th>
+                     <th>Багаж</th>
+                     <th>Место</th>
+                     <th>Дата бронирования</th>
+                     <th>Действия</th>
+                 </tr>
+             </thead>
+             <tbody>
+                {% for booking in passengers %}
+                 <tr>
+                     <td><strong>{{ booking.booking_code }}</strong></td>
+                     <td>{{ booking.passenger.full_name|default:"—" }}</td>
+                     <td>{{ booking.passenger.passport_number|default:"—" }}</td>
+
+                     <!-- НОВЫЕ ПОЛЯ ИЗ API -->
+                     <td>{{ booking.final_price|floatformat:2 }} ₽</td>
+                     <td>{{ booking.class_type|upper|default:"ECONOMY" }}</td>
+                     <td>{{ booking.seat|default:"—" }}</td>
+                     <td>{{ booking.baggage_allowed|yesno:"✅ Да,❌ Нет" }}</td>
+
+                     <!-- ✅ ИСПРАВЛЕНО: Убраны пробелы вокруг двоеточия в фильтре date -->
+                     <td>{{ booking.created_at|date:"d.m.Y H:i" }}</td>
+
+                     <td>
                         {% if can_cancel_booking %}
-                        <!-- Кнопка возврата (для dispatcher/admin) -->
-                        <form method="post" action="{% url 'app:booking_cancel' booking.id %}"
+                         <form method="post" action="{% url 'app:booking_cancel' booking.id %}"
                               onsubmit="return confirm('Отменить бронирование? Места вернутся в продажу.');"
                               style="display:inline;">
                             {% csrf_token %}
-                            <input type="hidden" name="flight_id" value="{{ flight.id }}">
-                            <button type="submit" class="btn btn-sm btn-warning">↩️ Возврат</button>
-                        </form>
+                             <input type="hidden" name="flight_id" value="{{ flight.id }}">
+                             <button type="submit" class="btn btn-sm btn-warning">↩️ Возврат</button>
+                         </form>
                         {% endif %}
-                          <a href="{% url 'app:booking_ticket_pdf' booking.id %}" class="btn btn-sm btn-secondary" target="_blank" title="Скачать PDF">
-                            📄 PDF
-                          </a>
+                         <a href="{% url 'app:booking_ticket_pdf' booking.id %}" class="btn btn-sm btn-secondary" target="_blank" title="Скачать PDF">📄</a>
 
                         {% if user_role == 'admin' %}
-                        <!-- Кнопка полного удаления (только admin) -->
-                        <form method="post" action="{% url 'app:booking_delete' booking_id=booking.id %}"
+                         <form method="post" action="{% url 'app:booking_delete' booking_id=booking.id %}"
                               onsubmit="return confirm('⚠️ ПОЛНОЕ УДАЛЕНИЕ бронирования?\nЭто действие нельзя отменить.');"
                               style="display:inline; margin-left: 4px;">
                             {% csrf_token %}
-                            <input type="hidden" name="flight_id" value="{{ flight.id }}">
-                            <button type="submit" class="btn btn-sm btn-danger" title="Удалить запись">🗑️</button>
-                        </form>
+                             <input type="hidden" name="flight_id" value="{{ flight.id }}">
+                             <button type="submit" class="btn btn-sm btn-danger" title="Удалить запись">🗑️</button>
+                         </form>
                         {% endif %}
-                    </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="empty-state">На этот рейс ещё не куплено ни одного билета</p>
-        {% endif %}
-    </section>
-
-</div>
-{% endblock %}
+                     </td>
+                 </tr>
+                {% endfor %}
+             </tbody>
+         </table>
+     </div>
+    {% else %}
+     <p class="empty-state">На этот рейс ещё не куплено ни одного билета</p>
+    {% endif %}
+ </section>
+    {% endblock %}

@@ -31,21 +31,36 @@ class BookingController:
         try:
             response = requests.post(f"{BookingController.BASE_URL}/", json=payload, headers=headers, timeout=10)
 
-            if response.status_code == 201:
-                data = response.json()
+            # ✅ Успешное создание
+            if response.status_code in (200, 201):
+                try:
+                    data = response.json()
+                except Exception:
+                    return True, [], 'Билеты оформлены, но ответ API не содержит деталей'
                 bookings = data if isinstance(data, list) else [data]
                 booking_code = bookings[0].get('bookingCode') or bookings[0].get('booking_code',
                                                                                  'N/A') if bookings else 'N/A'
                 return True, bookings, f'Билеты оформлены! Код: {booking_code}'
 
-            if response.status_code == 422:
-                return False, None, parse_v2_validation_errors(response)
-
-            detail = response.json().get('detail', 'Ошибка оформления')
-            return False, response.json(), detail
+            # ✅ Обработка ошибок (400, 404, 422, 500)
+            try:
+                err_data = response.json()
+                detail = err_data.get('detail', '')
+                # Парсинг 422 валидационных ошибок FastAPI
+                if isinstance(detail, list):
+                    msg_parts = []
+                    for err in detail:
+                        loc = err.get('loc', [])
+                        field = loc[-1] if loc else 'Поле'
+                        msg_parts.append(f"{field}: {err.get('msg', 'Ошибка')}")
+                    return False, None, "\n".join(msg_parts)
+                return False, None, detail or f'Ошибка API: {response.status_code}'
+            except Exception:
+                # Если ответ не JSON (например, 500 HTML от uvicorn)
+                return False, None, f'Ошибка API: {response.status_code} | {response.text[:150]}'
 
         except requests.RequestException as e:
-            return False, None, f'Сбой API: {e}'
+            return False, None, f'Сбой подключения к API: {e}'
 
     @staticmethod
     def add_connections(booking_code: str, flight_ids: list, access_token: str = None) -> tuple[bool, list | None, str]:

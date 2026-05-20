@@ -4,35 +4,74 @@
 <div class="form-container">
     <h2>🎫 Оформление бронирования</h2>
     {% if flight %}
-    <p>Рейс: <strong>{{ flight.flight_number }}</strong> | {{ flight.departure_date|date:"d.m.Y" }} (Осталось мест: {{ flight.free_seats }})</p>
+        <p>Рейс: <strong>{{ flight.flight_number }}</strong> | {{ flight.departure_date|date:"d.m.Y" }} (Осталось мест: {{ flight.free_seats }})</p>
     {% endif %}
 
     <form method="post" id="booking-form">
         {% csrf_token %}
         {% if form.non_field_errors %}
-        <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            <div class="alert alert-error">{{ form.non_field_errors }}</div>
         {% endif %}
 
         <div class="form-group">
-            <label>Пассажиры <span class="required">*</span></label>
-            <div id="passengers-container">
-                <div class="passenger-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-                    <select name="passenger_ids" class="form-select" style="flex-grow: 1;">
-                        {% for val, label in passenger_choices %}
-                        <option value="{{ val }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="button" class="btn btn-sm btn-success add-btn" title="Добавить пассажира">+</button>
-                </div>
+         <label>Пассажиры и места <span class="required">*</span></label>
+         <div id="passengers-container">
+             <div class="passenger-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                 <select name="passenger_ids" class="form-select" style="flex: 2;" required>
+                     {% for val, label in passenger_choices %}
+                         <option value="{{ val }}">{{ label }}</option>
+                     {% endfor %}
+                 </select>
+                 <input type="text" name="seats" class="form-control" style="flex: 1;" placeholder="Место (опц.)">
+                 <button type="button" class="btn btn-sm btn-success add-btn" title="Добавить пассажира">+</button>
+             </div>
+         </div>
+         <small class="help-text">
+             Нажмите <code>+</code>, чтобы добавить пассажира.
+             Оставьте поле места пустым, чтобы API назначил его автоматически.
+         </small>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- === НОВЫЕ ПОЛЯ: Детали билета === -->
+        <div class="form-grid">
+            <div class="form-group">
+                {{ form.class_type.label_tag }}
+                {{ form.class_type }}
             </div>
-            <small class="help-text">Нажмите <code>+</code>, чтобы добавить ещё одного пассажира</small>
+
+            <div class="form-group">
+                {{ form.baggage_allowed.label_tag }}
+                {{ form.baggage_allowed }}
+            </div>
+
+            <div class="form-group">
+                {{ form.payment_type.label_tag }}
+                {{ form.payment_type }}
+            </div>
+        </div>
+
+        <h4>💰 Стоимость</h4>
+        <div class="form-grid">
+            <div class="form-group">
+                {{ form.base_price.label_tag }}
+                {{ form.base_price }}
+            </div>
+            <div class="form-group">
+                {{ form.tax.label_tag }}
+                {{ form.tax }}
+            </div>
+            <div class="form-group">
+                {{ form.additional_fees.label_tag }}
+                {{ form.additional_fees }}
+            </div>
         </div>
 
         <hr class="my-4">
 
         <div class="form-group">
-            <label for="{{ form.connection_flight_id.id_for_label }}">{{ form.connection_flight_id.label }}</label>
-            {{ form.connection_flight_id }}
+            {{ form.connection_flight_id.label_tag }} {{ form.connection_flight_id }}
             <small class="help-text">Выберите рейс, на который нужно добавить билеты для всех пассажиров (опционально)</small>
         </div>
 
@@ -47,14 +86,17 @@
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('passengers-container');
 
-    // Обработка кнопки добавления
+    // Добавление новой строки
     container.addEventListener('click', function(e) {
         if (e.target.closest('.add-btn')) {
             const firstRow = container.querySelector('.passenger-row');
             const newRow = firstRow.cloneNode(true);
-            newRow.querySelector('select').value = ''; // Очищаем выбор в новом поле
 
-            // Превращаем "+" в "-" для удаления
+            // Очищаем значения в новой строке
+            newRow.querySelector('select').value = '';
+            newRow.querySelector('input[name="seats"]').value = '';
+
+            // Меняем кнопку на удаление
             const btn = newRow.querySelector('.add-btn');
             btn.className = 'btn btn-sm btn-danger remove-btn';
             btn.title = 'Удалить пассажира';
@@ -64,13 +106,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Обработка кнопки удаления
+    // Удаление строки
     container.addEventListener('click', function(e) {
         if (e.target.closest('.remove-btn')) {
             if (container.children.length > 1) {
                 e.target.closest('.passenger-row').remove();
-            } else {
-                alert('В бронировании должен быть минимум один пассажир');
             }
         }
     });

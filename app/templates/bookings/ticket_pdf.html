@@ -85,6 +85,10 @@
                     <td class="value">Economy (Y)</td>
                 </tr>
                 <tr>
+                    <td class="label">Место / Seat</td>
+                    <td class="value">{{ booking.seat|default:"Auto-assign" }}</td>
+                </tr>
+                <tr>
                     <td class="label">Багаж / Baggage</td>
                     <td class="value">{% if booking.baggage_allowed %}✅ Включён / Included{% else %}❌ Не включён / Not included{% endif %}</td>
                 </tr>

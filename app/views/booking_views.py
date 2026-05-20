@@ -61,6 +61,7 @@ class BookingCreateView(FormView):
         kwargs['current_flight_id'] = self.kwargs.get('flight_id')
         return kwargs
 
+
     def form_valid(self, form):
         token = _get_token(self.request)
         flight_id = self.kwargs.get('flight_id')
@@ -72,7 +73,15 @@ class BookingCreateView(FormView):
             form.add_error(None, 'Необходимо выбрать хотя бы одного пассажира')
             return self.form_invalid(form)
 
-        connection_id = form.cleaned_data.get('connection_flight_id')
+        # === СБОР МЕСТ ИЗ СТРОК ===
+        seats_raw = self.request.POST.getlist('seats')
+        seats_list = [s.strip() for s in seats_raw if s and s.strip()]
+
+        # Если места указаны, их количество должно совпадать с количеством пассажиров
+        if seats_list and len(seats_list) != len(passenger_ids):
+            form.add_error(None,
+                           f'Количество заполненных мест ({len(seats_list)}) должно совпадать с количеством пассажиров ({len(passenger_ids)})')
+            return self.form_invalid(form)
 
         payload = {
             'flightId': flight_id,
@@ -81,11 +90,15 @@ class BookingCreateView(FormView):
             'paymentType': form.cleaned_data.get('payment_type', 'card'),
             'basePrice': float(form.cleaned_data.get('base_price', 0)),
             'tax': float(form.cleaned_data.get('tax', 0)),
-            'additionalFees': float(form.cleaned_data.get('additional_fees', 0))
+            'additionalFees': float(form.cleaned_data.get('additional_fees', 0)),
+            'classType': form.cleaned_data.get('class_type', 'economy')
         }
 
+        # Передаем места в API только если они заполнены
+        if seats_list:
+            payload['seats'] = seats_list
 
-
+        connection_id = form.cleaned_data.get('connection_flight_id')
         if connection_id:
             payload['connectionFlightIds'] = [int(connection_id)]
 
@@ -168,25 +181,41 @@ class BookingTicketPdfView(View):
     def get(self, request, booking_id):
         token = _get_token(request)
 
-        # === 1. Получаем бронирование ===
-        all_bookings = BookingController.get_all_bookings(page=1, size=100, access_token=token)
+        # === 1. БЕЗОПАСНЫЙ ПОИСК (избегаем 422 из-за size=500) ===
         booking_data = None
-        for b in all_bookings.get('items', []):
-            if b.get('id') == booking_id:
-                booking_data = b
-                break
+        page = 1
+        max_pages = 5  # Проверяем первые 5 страниц (~250 записей)
+
+        while page <= max_pages and not booking_data:
+            # size=50 - безопасное значение по умолчанию для fastapi-pagination
+            data = BookingController.get_all_bookings(page=page, size=50, access_token=token)
+            for b in data.get('items', []):
+                # Безопасное сравнение ID (API может вернуть строку "36" или число 36)
+                b_id = b.get('id')
+                if b_id is not None and int(b_id) == int(booking_id):
+                    booking_data = b
+                    break
+            page += 1
+
         if not booking_data:
-            return HttpResponse("Бронирование не найдено", status=404)
+            return HttpResponse("❌ Бронирование не найдено или недоступно", status=404)
+
         booking = _normalize_keys(booking_data)
 
         # === 2. Получаем пассажира и рейс ===
-        passenger = PassengerController.get_passenger_by_id(booking['passenger_id'], token)
-        flight = FlightController.get_flight_by_id(booking['flight_id'], token)
+        passenger_id = booking.get('passenger_id') or booking.get('passengerId')
+        flight_id = booking.get('flight_id') or booking.get('flightId')
+
+        passenger = PassengerController.get_passenger_by_id(passenger_id, token) if passenger_id else None
+        flight = FlightController.get_flight_by_id(flight_id, token) if flight_id else None
 
         if passenger: passenger = _normalize_keys(passenger)
         if flight: flight = _normalize_keys(flight)
 
-        # === 3. Подготавливаем данные (ОБОГАЩЕНИЕ: ИМЕНА АЭРОПОРТОВ И АВИАКОМПАНИЙ) ===
+        if not flight:
+            return HttpResponse("❌ Рейс для данного бронирования не найден", status=404)
+
+        # === 3. Обогащаем данные (названия аэропортов, авиакомпаний) ===
         airlines_map = _fetch_airlines_map(request)
         airports_map = _fetch_airports_map(request)
 
@@ -198,143 +227,88 @@ class BookingTicketPdfView(View):
         arr_name = airports_map.get(arr_icao, {}).get('name') or arr_icao or 'N/A'
         airline_name = airlines_map.get(airline_code, '') or airline_code or 'N/A'
 
-        # Дата и время отправления
         dep_date_obj = _parse_datetime_safe(flight.get('departure_date'))
-        dep_date_str = dep_date_obj.strftime('%d.%m.%Y') if dep_date_obj else (
-                    str(flight.get('departure_date', ''))[:10] or 'N/A')
+        dep_date_str = dep_date_obj.strftime('%d.%m.%Y') if dep_date_obj else str(flight.get('departure_date', ''))[
+                                                                                  :10] or 'N/A'
 
         dep_time_obj = _parse_time(flight.get('departure_time'))
-        dep_time_str = dep_time_obj.strftime('%H:%M') if isinstance(dep_time_obj, datetime) or hasattr(dep_time_obj,
-                                                                                                       'strftime') else str(
-            dep_time_obj)[:5] if dep_time_obj else 'N/A'
+        dep_time_str = dep_time_obj.strftime('%H:%M') if hasattr(dep_time_obj, 'strftime') else str(dep_time_obj)[
+            :5] if dep_time_obj else 'N/A'
 
         passenger_name = passenger.get('full_name', 'N/A') if passenger else 'N/A'
-        issue_date_obj = _parse_datetime_safe(booking.get('created_at'))
-        issue_date_str = issue_date_obj.strftime('%d.%m.%Y') if issue_date_obj else (
-                    str(booking.get('created_at', ''))[:10] or 'N/A')
 
-        # Финальная цена (фолбэк на расчет, если поле не пришло)
-        final_price = booking.get('final_price') or booking.get('finalPrice')
-        if final_price is None:
-            final_price = float(
-                booking.get('base_price', 0) + booking.get('tax', 0) + booking.get('additional_fees', 0))
+        # ✅ ИЗВЛЕКАЕМ НОМЕР МЕСТА
+        seat = booking.get('seat') or booking.get('seat_number', 'Автоназначение')
+        if isinstance(seat, str) and seat.strip():
+            seat = seat.strip().upper()
+        else:
+            seat = '—'
 
-        # === 4. Создаём PDF ===
+        # Расчет цены
+        base_price = float(booking.get('base_price', 0))
+        tax = float(booking.get('tax', 0))
+        fees = float(booking.get('additional_fees', 0))
+        final_price = booking.get('final_price') or booking.get('finalPrice') or (base_price + tax + fees)
+
+        # === 4. Генерация PDF ===
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=15 * mm, leftMargin=15 * mm, topMargin=15 * mm,
-                                bottomMargin=15 * mm)
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=15 * mm, leftMargin=15 * mm,
+                                topMargin=15 * mm, bottomMargin=15 * mm)
 
         font_path = os.path.join(settings.BASE_DIR, 'app', 'assets', 'fonts', 'DejaVuSans.ttf')
+        base_font = 'Helvetica'
         if os.path.exists(font_path):
             pdfmetrics.registerFont(TTFont('DejaVu', font_path))
             base_font = 'DejaVu'
-        else:
-            base_font = 'Helvetica'
 
         styles = getSampleStyleSheet()
         story = []
 
-        # Стили
-        title_style = ParagraphStyle('TicketTitle', parent=styles['Normal'], fontName=base_font, fontSize=11,
-                                     alignment=TA_CENTER, spaceAfter=2 * mm)
-        subtitle_style = ParagraphStyle('TicketSubtitle', parent=styles['Normal'], fontName=base_font, fontSize=9,
-                                        alignment=TA_CENTER, spaceAfter=5 * mm)
-        info_style = ParagraphStyle('InfoLine', parent=styles['Normal'], fontName=base_font, fontSize=9,
-                                    spaceAfter=2 * mm)
-        route_style = ParagraphStyle('RouteInfo', parent=styles['Normal'], fontName=base_font, fontSize=9,
-                                     spaceAfter=2 * mm)
+        title_style = ParagraphStyle('Title', parent=styles['Normal'], fontName=base_font, fontSize=14,
+                                     alignment=TA_CENTER, spaceAfter=5 * mm)
+        info_style = ParagraphStyle('Info', parent=styles['Normal'], fontName=base_font, fontSize=10, spaceAfter=2 * mm)
 
-        story.append(Paragraph("ЭЛЕКТРОННЫЙ БИЛЕТ (МАРШРУТ/КВИТАНЦИЯ)", title_style))
-        story.append(Paragraph("ELECTRONIC TICKET (ITINERARY/RECEIPT)", subtitle_style))
-
-        # ✅ НОВОЕ: Поле авиакомпании
-        story.append(Paragraph(f"АВИАКОМПАНИЯ / AIRLINE: {airline_name}", info_style))
-        # ✅ ИСПРАВЛЕНО: Дата + Время отправления в одной строке
-        story.append(Paragraph(f"ДАТА И ВРЕМЯ / DATE & TIME: {dep_date_str} {dep_time_str}", info_style))
-        story.append(Paragraph(f"ФАМИЛИЯ/NAME: {passenger_name.upper()}", info_style))
-        story.append(Spacer(1, 3 * mm))
-
-        # ✅ ИСПРАВЛЕНО: Маршрут теперь с полными названиями
-        story.append(Paragraph(f"ОТПР/HASH/ORIG/DESTN: {dep_name} ✈️ {arr_name}", route_style))
-        story.append(Paragraph(f"ВЫДАН ОТ/ISSUED BY: {issue_date_str}", route_style))
-        story.append(Spacer(1, 3 * mm))
-
-        ticket_number = f"{booking.get('id', 'N/A')}-001"
-        story.append(Paragraph(f"НОМЕР БИЛЕТА/TICKET NUMBER: {ticket_number}", info_style))
-        story.append(Paragraph("ДОПОЛНИТЕЛЬНЫЕ БИЛЕТЫ: ---", info_style))
-        story.append(Paragraph(f"ДАННЫЕ БРОН/BOOKING REF: {booking.get('booking_code', 'N/A')}", info_style))
+        story.append(Paragraph("ЭЛЕКТРОННЫЙ БИЛЕТ", title_style))
         story.append(Spacer(1, 5 * mm))
 
-        story.append(Paragraph("ИНФОРМАЦИЯ О РЕЙСЕ:",
-                               ParagraphStyle('FlightInfo', parent=styles['Normal'], fontName=base_font, fontSize=9,
-                                              spaceAfter=2 * mm)))
+        story.append(Paragraph(f"<b>Пассажир:</b> {passenger_name.upper()}", info_style))
+        story.append(Paragraph(f"<b>Рейс:</b> {flight.get('flight_number') or 'N/A'} | {airline_name}", info_style))
+        story.append(Paragraph(f"<b>Маршрут:</b> {dep_name} → {arr_name}", info_style))
+        story.append(Paragraph(f"<b>Дата/Время:</b> {dep_date_str} {dep_time_str}", info_style))
+        story.append(Paragraph(f"<b>Класс:</b> {booking.get('class_type', 'Economy').upper()}", info_style))
 
-        flight_data = [
-            ['ОТ/ДО FROM/TO:', f"{dep_name} → {arr_name}"],
-            ['РЕЙС FLIGHT:', flight.get('flight_number') or flight.get('flightNumber', 'N/A')],
-            ['КЛ CLASS:', 'Y (Economy)'],
-            ['ДАТА DATE:', dep_date_str],
-            ['ВРЕМЯ DEP TIME:', dep_time_str],
-            ['СТАТУС STATUS:', 'OK'],
-            ['БАГАЖ BAG:', 'Да' if booking.get('baggage_allowed') else 'Нет'],
-        ]
+        # ✅ НОВОЕ: Строка с местом в билете
+        story.append(Paragraph(f"<b>Место / Seat:</b> {seat}", info_style))
 
-        flight_table = Table(flight_data, colWidths=[40 * mm, 80 * mm])
-        flight_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), base_font),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('PADDING', (0, 0), (-1, -1), 3),
-        ]))
-        story.append(flight_table)
+        story.append(
+            Paragraph(f"<b>Багаж:</b> {'Включен' if booking.get('baggage_allowed') else 'Не включен'}", info_style))
+        story.append(Paragraph(f"<b>Код бронирования:</b> {booking.get('booking_code', 'N/A')}", info_style))
+
         story.append(Spacer(1, 5 * mm))
+        story.append(Paragraph("<b>Расчет стоимости:</b>", info_style))
 
-        story.append(Paragraph("ПЕРЕДАТ. НАДПИСИ/ОГРАНИЧ./ENDORSEMENTS/RESTRICTIONS: ", info_style))
-        story.append(Paragraph("NON-REFUNDABLE / НЕ ВОЗВРАТНЫЙ",
-                               ParagraphStyle('Endorsement', parent=styles['Normal'], fontName=base_font, fontSize=8,
-                                              spaceAfter=3 * mm)))
-
-        payment_type = booking.get('payment_type', 'N/A').upper()
-        story.append(Paragraph(f"ФОРМА ОПЛАТЫ/FORM OF PAYMENT: {payment_type}", info_style))
-        story.append(Spacer(1, 3 * mm))
-
-        story.append(Paragraph("РАСЧЕТ ТАРИФА/FARE CALCULATION: ", info_style))
-        price_data = [
-            ['ТАРИФ/FARE', f"{float(booking.get('base_price', 0)):.2f} RUB"],
-            ['СБОР/TAX/FEE/CHARGE', f"{float(booking.get('tax', 0)):.2f} RUB"],
-            ['ДОП. СБОРЫ/ADDITIONAL FEES', f"{float(booking.get('additional_fees', 0)):.2f} RUB"],
-            ['', ''],
-            ['ИТОГО/TOTAL', f"{float(final_price):.2f} RUB"],
+        price_table_data = [
+            ['Базовая цена', f"{base_price:.2f} RUB"],
+            ['Налоги', f"{tax:.2f} RUB"],
+            ['Доп. сборы', f"{fees:.2f} RUB"],
+            ['<b>ИТОГО</b>', f"<b>{final_price:.2f} RUB</b>"]
         ]
-        price_table = Table(price_data, colWidths=[80 * mm, 40 * mm])
-        price_table.setStyle(TableStyle([
+
+        t = Table(price_table_data, colWidths=[100 * mm, 50 * mm])
+        t.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), base_font),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LINEBELOW', (0, 0), (1, 0), 0.5, colors.black),
-            ('LINEBELOW', (0, 1), (1, 1), 0.5, colors.black),
-            ('LINEBELOW', (0, 2), (1, 2), 0.5, colors.black),
-            ('LINEABOVE', (0, 4), (1, 4), 1, colors.black),
-            ('BACKGROUND', (0, 4), (1, 4), colors.lightgrey),
-            ('PADDING', (0, 0), (-1, -1), 4),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+            ('LINEBELOW', (0, -2), (-1, -2), 1, colors.black),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
+            ('PADDING', (0, 0), (-1, -1), 5),
         ]))
-        story.append(price_table)
-
-        story.append(Spacer(1, 10 * mm))
-
-        footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontName=base_font, fontSize=7,
-                                      alignment=TA_CENTER, textColor=colors.grey)
-        story.append(Paragraph("Данный документ является подтверждением бронирования.", footer_style))
-        story.append(Paragraph(f"Сгенерировано: {datetime.now().strftime('%d.%m.%Y %H:%M')}", footer_style))
+        story.append(t)
 
         doc.build(story)
         buffer.seek(0)
 
         response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-        filename = f"ticket_{booking.get('booking_code', 'ticket')}.pdf"
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Disposition'] = f'attachment; filename="ticket_{booking.get("booking_code", "ticket")}.pdf"'
         return response

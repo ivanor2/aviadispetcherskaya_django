@@ -4,7 +4,6 @@ from .passenger import Passenger
 import secrets
 import string
 
-
 class Booking(models.Model):
     """Бронирование билета"""
     booking_code = models.CharField(
@@ -14,7 +13,6 @@ class Booking(models.Model):
         editable=False,
         help_text="Уникальный код из 6 символов (буквы+цифры)"
     )
-
     flight = models.ForeignKey(
         Flight,
         on_delete=models.CASCADE,
@@ -31,6 +29,14 @@ class Booking(models.Model):
     booked_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата бронирования")
     is_active = models.BooleanField(default=True, verbose_name="Активно")
 
+    # === НОВЫЕ ПОЛЯ ИЗ API ===
+    baggage_allowed = models.BooleanField(default=False, verbose_name="Багаж включен")
+    payment_type = models.CharField(max_length=20, default="card", verbose_name="Тип оплаты")
+    base_price = models.FloatField(default=0.0, verbose_name="Базовая цена")
+    tax = models.FloatField(default=0.0, verbose_name="Налог")
+    additional_fees = models.FloatField(default=0.0, verbose_name="Доп. сборы")
+    class_type = models.CharField(max_length=20, default="economy", verbose_name="Класс обслуживания")
+
     class Meta:
         verbose_name = "Бронирование"
         verbose_name_plural = "Бронирования"
@@ -38,6 +44,11 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.booking_code} - {self.passenger.full_name}"
+
+    @property
+    def final_price(self):
+        """Вычисляет итоговую цену"""
+        return self.base_price + self.tax + self.additional_fees
 
     def save(self, *args, **kwargs):
         """Генерация уникального кода бронирования"""

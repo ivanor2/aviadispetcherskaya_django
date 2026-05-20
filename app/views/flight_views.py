@@ -4,7 +4,7 @@ from django.shortcuts import redirect
 from django.contrib import messages
 from django.urls import reverse_lazy
 from app.forms import FlightSearchForm, FlightForm
-from app.controllers import FlightController
+from app.controllers import FlightController, PassengerController, BookingController
 from app.utils import (
     _normalize_keys, _get_token, _get_role_perms,
     _fetch_airlines_map, _fetch_airports_map, _enrich_flights_data,
@@ -112,8 +112,8 @@ class FlightCreateView(FormView):
             'arrivalAirportIcao': form.cleaned_data['arrival_airport'],
             'departureDate': str(form.cleaned_data['departure_date']),
             'departureTime': str(form.cleaned_data['departure_time']),
+            'arrivalTime': str(form.cleaned_data['arrival_time']),
             'totalSeats': form.cleaned_data['total_seats'],
-            'freeSeats': form.cleaned_data.get('free_seats', form.cleaned_data['total_seats'])
         }
 
         success, data, message = FlightController.create_flight(payload, _get_token(self.request))
@@ -143,32 +143,45 @@ class FlightDetailView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(_get_role_perms(self.request))
-
-        flight_data = getattr(self, '_cached_flight_data', None)
         token = self.request.session.get('access_token')
-        flight_number = flight_data.get('flightNumber') or flight_data.get('flight_number', '')
 
-        passengers_data = []
-        try:
-            if flight_number:
-                full_data = FlightController.get_flight_with_passengers(flight_number, token)
-                if isinstance(full_data, dict) and full_data.get('flight'):
-                    flight_data = full_data['flight']
-                passengers_data = full_data.get('passengers', [])
-        except Exception as e:
-            print(f"⚠️ Не удалось загрузить пассажиров для рейса {kwargs.get('pk')}: {e}")
+        # 1. Получаем данные рейса
+        flight_data = getattr(self, '_cached_flight_data', None)  # Если кэшировали
+        if not flight_data:
+            flight_id = self.kwargs.get('pk')
+            flight_data = FlightController.get_flight_by_id(flight_id, token)
 
+        if not flight_data:
+            messages.error(self.request, 'Рейс не найден')
+            return context
+
+        flight_norm = _normalize_keys(flight_data)
         airlines_map = _fetch_airlines_map(self.request)
         airports_map = _fetch_airports_map(self.request)
+        enriched_flights = _enrich_flights_data([flight_norm], airlines_map, airports_map)
+        context['flight'] = enriched_flights[0] if enriched_flights else flight_norm
 
-        flight_normalized = _normalize_keys(flight_data)
-        enriched_flights = _enrich_flights_data([flight_normalized], airlines_map, airports_map)
-        flight_enriched = enriched_flights[0] if enriched_flights else None
 
-        context.update({
-            'flight': flight_enriched,
-            'passengers': _normalize_keys(passengers_data)
-        })
+        flight_id = flight_data.get('id')
+        if flight_id:
+            bookings_data = BookingController.get_bookings_by_flight(flight_id, token)
+            enriched_bookings = []
+            for b in _normalize_keys(bookings_data):
+                if 'passenger' not in b and 'passenger_id' in b:
+                    p = PassengerController.get_passenger_by_id(b['passenger_id'], token)
+                    if p:
+                        p_norm = _normalize_keys(p)
+                        b['passenger'] = p_norm
+
+                # Парсим даты
+                b['booked_at'] = _parse_datetime_safe(b.get('booked_at') or b.get('createdAt'))
+                b['final_price'] = float(b.get('base_price', 0) + b.get('tax', 0) + b.get('additional_fees', 0))
+                enriched_bookings.append(b)
+
+            context['passengers'] = enriched_bookings
+        else:
+            context['passengers'] = []
+
         return context
 
 

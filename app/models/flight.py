@@ -50,7 +50,7 @@ class Flight(models.Model):
         return f"{self.flight_number} {self.departure_airport} → {self.arrival_airport}"
 
     def has_free_seats(self):
-        return self.free_seats > 0
+        return True
 
     def save(self, *args, **kwargs):
         """Авто-синхронизация free_seats при создании"""

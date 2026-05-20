@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class BookingForm(forms.Form):
-    # Загружаем рейсы для выбора пересадки
+    # Поле для выбора рейса пересадки
     connection_flight_id = forms.ChoiceField(
         required=False,
         choices=[('', '--- Не нужна пересадка ---')],
@@ -25,6 +25,13 @@ class BookingForm(forms.Form):
     payment_type = forms.ChoiceField(
         choices=[('card', 'Карта'), ('cash', 'Наличные'), ('online', 'Онлайн')],
         label="Способ оплаты",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    # === НОВОЕ: Класс обслуживания ===
+    class_type = forms.ChoiceField(
+        choices=[('economy', 'Эконом'), ('business', 'Бизнес'), ('first', 'Первый класс')],
+        label="Класс обслуживания",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
@@ -55,12 +62,11 @@ class BookingForm(forms.Form):
     def __init__(self, *args, access_token=None, current_flight_id=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # 1. Загружаем пассажиров
         self.passenger_choices = [('', '-- Выберите пассажира --')]
 
         if access_token:
             try:
-                # Пассажиры
+                # Загрузка пассажиров
                 p_data = PassengerController.get_all_passengers(page=1, size=100, access_token=access_token)
                 p_items = p_data.get('items', [])
                 for p in p_items:
@@ -69,7 +75,7 @@ class BookingForm(forms.Form):
                     passport = p.get('passportNumber') or p.get('passport_number') or '?'
                     self.passenger_choices.append((p_id, f"{name} ({passport})"))
 
-                # 2. Загружаем рейсы для пересадки
+                # Загрузка рейсов для пересадки
                 f_data = FlightController.get_all_flights(page=1, size=100, access_token=access_token)
                 f_items = f_data.get('items', [])
 
@@ -78,16 +84,13 @@ class BookingForm(forms.Form):
                     fid = str(f.get('id'))
                     fid_int = int(fid)
 
-                    # Исключаем текущий рейс из списка пересадок
                     if current_flight_id and fid_int == int(current_flight_id):
                         continue
 
-                    # Показываем только рейсы с доступными местами
                     free_seats = f.get('free_seats') or f.get('freeSeats', 0)
                     if not free_seats or free_seats <= 0:
                         continue
 
-                    # Формируем красивую метку
                     fnum = f.get('flightNumber') or f.get('flight_number', 'N/A')
                     dep = f.get('departureAirportIcao') or f.get('departure_airport_icao', '?')
                     arr = f.get('arrivalAirportIcao') or f.get('arrival_airport_icao', '?')
@@ -111,7 +114,6 @@ class BookingCancelForm(forms.Form):
     """Форма отмены бронирования"""
     booking_id = forms.IntegerField(widget=forms.HiddenInput())
     flight_id = forms.IntegerField(widget=forms.HiddenInput())
-
     confirm = forms.BooleanField(
         required=True,
         label="Подтверждаю возврат билета",

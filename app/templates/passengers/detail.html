@@ -46,30 +46,33 @@
                 <tr>
                     <th>Код бронирования</th>
                     <th>Рейс</th>
+                    <th>Место</th>
                     <th>Дата оформления</th>
                     <th>Статус</th>
                 </tr>
             </thead>
             <tbody>
                 {% for b in bookings %}
-                <tr>
-                    <td><strong>{{ b.booking_code }}</strong></td>
-                    <td>
+                 <tr>
+                     <td><strong>{{ b.booking_code }}</strong></td>
+                     <td>
                         {% if b.flight_number %}
-                            <strong>{{ b.flight_number }}</strong>
-                            <br>
-                            <small class="text-muted">
-                                {{ b.departure_icao|default:"?" }} → {{ b.arrival_icao|default:"?" }}
-                            </small>
+                             <strong>{{ b.flight_number }}</strong>
                         {% else %}
-                            <span class="text-muted">Рейс #{{ b.flight_id|default:"—" }}</span>
+                             Рейс #{{ b.flight_id }}
                         {% endif %}
-                    </td>
-                    <td>{{ b.created_at|date:"d.m.Y H:i" }}</td>
-                    <td><span class="badge badge-success">Активно</span></td>
-                </tr>
+                     </td>
+                     <td>{{ b.created_at|date:"d.m.Y H:i" }}</td>
+                     <!-- НОВЫЕ ДАННЫЕ -->
+                     <td>{{ b.final_price|floatformat:2 }} ₽</td>
+                     <td>{{ b.class_type|upper|default:"ECONOMY" }}</td>
+                     <td>{{ b.seat|default:"—" }}</td>
+                     <td><span class="badge {% if b.baggage_allowed %}badge-success{% else %}badge-secondary{% endif %}">
+                         {{ b.baggage_allowed|yesno:"Багаж вкл,Без багажа" }}
+                     </span></td>
+                 </tr>
                 {% endfor %}
-            </tbody>
+             </tbody>
         </table>
     </div>
     {% else %}
