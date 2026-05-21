@@ -2,7 +2,7 @@
 {% block title %}Продажа билета — {{ flight.flight_number }}{% endblock %}
 {% block content %}
 <div class="form-container">
-    <h2>🎫 Оформление бронирования</h2>
+    <h2> Оформление бронирования</h2>
     {% if flight %}
     <p>Рейс: <strong>{{ flight.flight_number }}</strong> | {{ flight.departure_date|date:"d.m.Y" }} (Осталось мест: {{ flight.free_seats }})</p>
     {% endif %}
@@ -37,7 +37,7 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-lg">✅ Оформить билеты</button>
+            <button type="submit" class="btn btn-primary btn-lg"> Оформить билеты</button>
             <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-secondary">Отмена</a>
         </div>
     </form>

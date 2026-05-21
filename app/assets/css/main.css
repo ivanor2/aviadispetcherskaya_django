@@ -52,6 +52,46 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .quick-action:hover { transform: translateY(-2px); }
 .quick-action-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
 
+/* Карточки в одну строку для списков */
+.cards-grid-single { display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 1.5rem 0; }
+.flight-card-single, .passenger-card-single, .user-card-single, .airport-card-single, .airline-card-single { 
+    background: #fff; 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+.flight-card-single-content, .passenger-card-single-content, .user-card-single-content, .airport-card-single-content, .airline-card-single-content {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.flight-card-single-main, .passenger-card-single-main, .user-card-single-main, .airport-card-single-main, .airline-card-single-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.flight-number, .passenger-name, .user-name, .airport-code, .airline-code { font-size: 1.1rem; }
+.route-mini { color: #666; font-size: 0.95rem; }
+.schedule-mini { color: #888; font-size: 0.9rem; }
+.detail-item { font-size: 0.9rem; color: #666; }
+.passenger-details { display: flex; gap: 1rem; flex-wrap: wrap; }
+.user-role-badge { background: #4fc3f7; color: #1a1a2e; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+.airport-name, .airline-name { color: #666; }
+.flight-card-single-side, .passenger-card-single-side { min-width: 100px; }
+.flight-card-single-actions, .passenger-card-single-actions, .user-card-single-actions, .airport-card-single-actions, .airline-card-single-actions { 
+    display: flex; 
+    gap: 0.5rem; 
+    flex-wrap: wrap;
+}
+
 /* Кнопки */
 .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: background 0.2s; }
 .btn-primary { background: #1a1a2e; color: #fff; }

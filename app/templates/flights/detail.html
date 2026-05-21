@@ -22,9 +22,9 @@
             {% if flight.free_seats == 0 %}
                 <span class="status-badge">❌ Мест нет</span>
             {% elif flight.free_seats < 10 %}
-                <span class="status-badge">⚠️ Осталось {{ flight.free_seats }} мест</span>
+                <span class="status-badge"> Осталось {{ flight.free_seats }} мест</span>
             {% else %}
-                <span class="status-badge">✅ В продаже</span>
+                <span class="status-badge"> В продаже</span>
             {% endif %}
         </div>
     </header>
@@ -42,7 +42,7 @@
             </p>
         </div>
 
-        <div class="route-connector">✈️</div>
+        <div class="route-connector"></div>
 
         <div class="info-card">
             <h3>🛬 Прибытие</h3>
@@ -70,14 +70,14 @@
 
         <div class="action-buttons">
             {% if flight.free_seats > 0 and can_manage_bookings %}
-            <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-primary btn-lg">🎫 Продать билет</a>
+            <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-primary btn-lg"> Продать билет</a>
             {% endif %}
             {% if is_admin and flight.id %}
             <form method="post" action="{% url 'app:flight_delete' flight.id %}" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger btn-lg"
                     onclick="return confirm('Вы уверены, что хотите удалить этот рейс? Это действие нельзя отменить.');">
-                🗑️ Удалить рейс
+                 Удалить рейс
                 </button>
             </form>
             {% endif %}
@@ -89,7 +89,7 @@
 
     <!-- Пассажиры на рейсе -->
     <section class="passengers-section">
-        <h3>👥 Пассажиры на рейсе</h3>
+        <h3> Пассажиры на рейсе</h3>
 
         {% if is_guest %}
         <p class="empty-state">Нет доступа к информации о пассажирах</p>
@@ -130,11 +130,11 @@
                         {% if user_role == 'admin' %}
                         <!-- Кнопка полного удаления (только admin) -->
                         <form method="post" action="{% url 'app:booking_delete' booking_id=booking.id %}"
-                              onsubmit="return confirm('⚠️ ПОЛНОЕ УДАЛЕНИЕ бронирования?\nЭто действие нельзя отменить.');"
+                              onsubmit="return confirm(' ПОЛНОЕ УДАЛЕНИЕ бронирования?\nЭто действие нельзя отменить.');"
                               style="display:inline; margin-left: 4px;">
                             {% csrf_token %}
                             <input type="hidden" name="flight_id" value="{{ flight.id }}">
-                            <button type="submit" class="btn btn-sm btn-danger" title="Удалить запись">🗑️</button>
+                            <button type="submit" class="btn btn-sm btn-danger" title="Удалить запись"></button>
                         </form>
                         {% endif %}
                     </td>

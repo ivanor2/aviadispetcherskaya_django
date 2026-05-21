@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>🔍 Поиск пассажира</h1>
+    <h1> Поиск пассажира</h1>
 </div>
 
 <div class="search-page">
@@ -19,7 +19,7 @@
             </label>
             <label>
                 <input type="radio" name="search_type" value="name">
-                <span>👤 По ФИО</span>
+                <span> По ФИО</span>
             </label>
         </div>
 
@@ -27,7 +27,7 @@
             <input type="text" name="query" class="form-control form-control-lg"
                    placeholder="Введите номер паспорта (NNNN-NNNNNN) или ФИО..."
                    required autocomplete="off">
-            <button type="submit" class="btn btn-primary btn-lg">🔍 Найти</button>
+            <button type="submit" class="btn btn-primary btn-lg"> Найти</button>
         </div>
 
         <small class="help-text">
@@ -38,7 +38,7 @@
     <!-- Результаты поиска (подгружаются после отправки) -->
     {% if passenger %}
     <div class="search-result">
-        <h3>✅ Пассажир найден</h3>
+        <h3> Пассажир найден</h3>
         <div class="passenger-card">
             <div class="passenger-header">
                 <h4>{{ passenger.full_name }}</h4>
@@ -47,12 +47,12 @@
             <div class="passenger-details">
                 <p><strong>🎂 Дата рождения:</strong> {{ passenger.birth_date|date:"d.m.Y" }}</p>
                 <p><strong>🪪 Выдан:</strong> {{ passenger.passport_issued_by }}</p>
-                <p><strong>📅 Дата выдачи:</strong> {{ passenger.passport_issue_date|date:"d.m.Y" }}</p>
+                <p><strong> Дата выдачи:</strong> {{ passenger.passport_issue_date|date:"d.m.Y" }}</p>
             </div>
 
             {% if bookings %}
             <div class="passenger-bookings">
-                <h4>🎫 Бронирования:</h4>
+                <h4> Бронирования:</h4>
                 <ul class="bookings-list">
                     {% for booking in bookings %}
                     <li>
