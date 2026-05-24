@@ -54,7 +54,7 @@ class FlightForm(forms.Form):
         super().__init__(*args, **kwargs)
         headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
 
-        # ✅ Загрузка авиакомпаний из API
+        # Загрузка авиакомпаний из API
         try:
             resp = requests.get(f"{settings.API_BASE_URL}/airlines", headers=headers, timeout=5)
             if resp.status_code == 200:
@@ -64,7 +64,7 @@ class FlightForm(forms.Form):
         except Exception:
             pass
 
-        # ✅ Загрузка аэропортов
+        # Загрузка аэропортов
         try:
             resp = requests.get(f"{settings.API_BASE_URL}/airports", params={'page': 1, 'size': 100}, headers=headers, timeout=5)
             if resp.status_code == 200:
@@ -118,7 +118,7 @@ class FlightSearchForm(forms.Form):
 
         if search_type == 'number' and query:
             query = query.upper()
-            # ✅ Теперь принимает 2 или 3 буквы (как в FastAPI)
+            # Теперь принимает 2 или 3 буквы (как в FastAPI)
             if not re.match(r'^[A-Z]{2,3}-\d{3}$', query):
                 raise forms.ValidationError('Формат: AA-NNN или AAA-NNN (например, SU-123)')
         return query

@@ -18,16 +18,16 @@ class FlightController:
         try:
             response = requests.get(FlightController.BASE_URL, params=params, headers=headers, timeout=10)
 
-            # 🔍 ЛОГИРОВАНИЕ ОТВЕТА (смотри в консоли Django!)
+            # ЛОГИРОВАНИЕ ОТВЕТА (смотри в консоли Django!)
             logger.info(f"📡 API v2 GET /flights -> Status: {response.status_code}")
             if response.status_code != 200:
-                logger.warning(f"⚠️ API Error: {response.text[:200]}")
+                logger.warning(f"API Error: {response.text[:200]}")
 
             response.raise_for_status()
             return normalize_api_response(response.json(), page)
 
         except requests.RequestException as e:
-            logger.error(f"❌ FlightController Connection Error: {e}")
+            logger.error(f"FlightController Connection Error: {e}")
             return {'items': [], 'total': 0, 'page': page, 'pages': 0}
 
     @staticmethod
