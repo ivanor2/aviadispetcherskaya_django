@@ -2,7 +2,7 @@
 {% block title %}{{ passenger.full_name }} — Данные пассажира{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>👤 {{ passenger.full_name }}</h1>
+    <h1> {{ passenger.full_name }}</h1>
     <div>
         <a href="{% url 'app:passenger_list' %}" class="btn btn-secondary">← Назад к списку</a>
     </div>
@@ -26,10 +26,10 @@
     {% if user_role == 'admin' %}
     <div style="margin: 1.5rem 0; padding-top: 1rem; border-top: 1px solid #eee;">
         <form method="post" action="{% url 'app:passenger_delete' pk=passenger.id %}"
-              onsubmit="return confirm('⚠️ Вы уверены, что хотите удалить пассажира {{ passenger.full_name }}?\nВсе связанные бронирования также будут удалены.\nЭто действие нельзя отменить.');">
+              onsubmit="return confirm(' Вы уверены, что хотите удалить пассажира {{ passenger.full_name }}?\nВсе связанные бронирования также будут удалены.\nЭто действие нельзя отменить.');">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger">
-                🗑️ Удалить пассажира навсегда
+                 Удалить пассажира навсегда
             </button>
             <a href="{% url 'app:passenger_list' %}" class="btn btn-secondary">← Отмена</a>
         </form>
@@ -38,7 +38,7 @@
 
     <hr style="margin: 2rem 0;">
 
-    <h3>🎫 Бронирования ({{ bookings|length }})</h3>
+    <h3> Бронирования ({{ bookings|length }})</h3>
     {% if bookings %}
     <div class="passengers-table-container">
         <table class="passengers-table">

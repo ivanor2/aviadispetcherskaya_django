@@ -4,13 +4,13 @@
 {% block content %}
 <div class="dashboard">
     <header class="dashboard-header">
-        <h1>🎛️ Панель управления аэропортом</h1>
+        <h1> Панель управления аэропортом</h1>
         <p>Управление авиарейсами, пассажирами и бронированиями</p>
     </header>
 
     <!-- Статистика -->
     <section class="stats-section">
-        <h2>📈 Статистика</h2>
+        <h2> Статистика</h2>
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-value">{{ total_flights|default:0 }}</div>
@@ -45,49 +45,49 @@
     <!-- Быстрые действия (ролевой доступ) -->
     <!-- ... выше секция статистики ... -->
      <section class="quick-actions-section">
-         <h2>⚡ Быстрые действия</h2>
+         <h2> Быстрые действия</h2>
          <div class="quick-actions">
             {% if can_manage_flights %}
              <a href="{% url 'app:flight_create' %}" class="quick-action role-dispatcher-only role-admin-only">
-                 <span class="quick-action-icon">➕</span>
+                 <span class="quick-action-icon"></span>
                  <span>Добавить рейс</span>
              </a>
             {% endif %}
 
             {% if can_manage_passengers %}
              <a href="{% url 'app:passenger_search' %}" class="quick-action role-dispatcher-only role-admin-only">
-                 <span class="quick-action-icon">🔍</span>
+                 <span class="quick-action-icon"></span>
                  <span>Найти пассажира</span>
              </a>
             {% endif %}
 
              <a href="{% url 'app:flight_list' %}" class="quick-action">
-                 <span class="quick-action-icon">🔎</span>
+                 <span class="quick-action-icon"></span>
                  <span>Поиск рейса</span>
              </a>
 
             {% if can_manage_bookings %}
              <a href="{% url 'app:passenger_list' %}" class="quick-action">
-                 <span class="quick-action-icon">👥</span>
+                 <span class="quick-action-icon"></span>
                  <span>Все пассажиры</span>
              </a>
             {% endif %}
 
              <a href="{% url 'app:airport_list' %}" class="quick-action role-admin-only">
-                <span class="quick-action-icon">🗂️</span>
+                <span class="quick-action-icon"></span>
             <span>Управление аэропортами</span>
         </a>
 
-<!-- Было: <a href="#" class="quick-action role-admin-only">👤 Пользователи</a> -->
+<!-- Было: <a href="#" class="quick-action role-admin-only"> Пользователи</a> -->
 <!-- Стало: -->
 <a href="{% url 'app:user_list' %}" class="quick-action role-admin-only">
-    <span class="quick-action-icon">👤</span>
+    <span class="quick-action-icon"></span>
     <span>Пользователи</span>
 </a>
 
 <!-- Добавляем Авиакомпании (опционально, но полезно) -->
 <a href="{% url 'app:airline_list' %}" class="quick-action role-admin-only">
-    <span class="quick-action-icon">✈️</span>
+    <span class="quick-action-icon"></span>
     <span>Авиакомпании</span>
 </a>
 
@@ -97,7 +97,7 @@
         {% if can_manage_bookings %}
     <section class="quick-ticket-sale-section" style="margin-top: 2rem; margin-bottom: 2rem;">
         <div class="form-container" style="padding: 1.5rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
-            <h2 style="margin-bottom: 1rem; color: #1a1a2e;">🎫 Быстрая продажа билета</h2>
+            <h2 style="margin-bottom: 1rem; color: #1a1a2e;"> Быстрая продажа билета</h2>
             <form action="{% url 'app:booking_select' %}" method="get" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
                 <div class="form-group" style="flex: 1; min-width: 250px;">
                     <label for="flight_id_select" style="font-weight: 500; margin-bottom: 0.5rem; display: block; color: #333;">Выберите рейс</label>
@@ -106,7 +106,7 @@
                         {% for flight in flights_for_booking %}
                             {% if flight.free_seats > 0 %}
                             <option value="{{ flight.id }}">
-                                {{ flight.flight_number }} | {{ flight.departure_airport_name }} ✈️ {{ flight.arrival_airport_name }} | {{ flight.departure_date|date:"d.m.Y" }} (осталось {{ flight.free_seats }} мест)
+                                {{ flight.flight_number }} | {{ flight.departure_airport_name }}  {{ flight.arrival_airport_name }} | {{ flight.departure_date|date:"d.m.Y" }} (осталось {{ flight.free_seats }} мест)
                             </option>
                             {% endif %}
                         {% empty %}
@@ -114,7 +114,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary btn-lg">🎫 Продать билет</button>
+                <button type="submit" class="btn btn-primary btn-lg"> Продать билет</button>
             </form>
         </div>
     </section>
@@ -124,7 +124,7 @@
     <!-- Ближайшие рейсы -->
     <section class="flights-section">
         <div class="section-header">
-            <h2>✈️ Ближайшие рейсы</h2>
+            <h2> Ближайшие рейсы</h2>
             <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">Все рейсы →</a>
         </div>
 
@@ -139,19 +139,19 @@
 
                 <div class="route">
                     <div class="airport">
-                        <!-- ✅ Название аэропорта вместо кода -->
+                        <!--  Название аэропорта вместо кода -->
                         <span class="airport-code">{{ flight.departure_airport_name }}</span>
                     </div>
-                    <span class="route-arrow">✈</span>
+                    <span class="route-arrow"></span>
                     <div class="airport">
-                        <!-- ✅ Название аэропорта вместо кода -->
+                        <!--  Название аэропорта вместо кода -->
                         <span class="airport-code">{{ flight.arrival_airport_name }}</span>
                     </div>
                 </div>
 
                 <div class="schedule">
-                    <p><span class="icon">📅</span> {{ flight.departure_date|date:"d.m.Y" }}</p>
-                    <p><span class="icon">🕐</span> {{ flight.departure_time|time:"H:i" }}</p>
+                    <p><span class="icon"></span> {{ flight.departure_date|date:"d.m.Y" }}</p>
+                    <p><span class="icon"></span> {{ flight.departure_time|time:"H:i" }}</p>
                 </div>
 
                 <div class="seats {% if flight.free_seats == 0 %}sold-out{% endif %}">
@@ -162,7 +162,7 @@
                 <div class="flight-actions">
                     <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-primary btn-sm">Подробнее</a>
                     {% if flight.free_seats > 0 and can_manage_bookings %}
-                    <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-success btn-sm">🎫 Купить</a>
+                    <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-success btn-sm"> Купить</a>
                     {% endif %}
                 </div>
             </article>
@@ -172,7 +172,7 @@
         <div class="empty-state">
             <p>Рейсы не найдены</p>
             {% if can_manage_flights %}
-            <a href="{% url 'app:flight_create' %}" class="btn btn-primary">➕ Добавить рейс</a>
+            <a href="{% url 'app:flight_create' %}" class="btn btn-primary"> Добавить рейс</a>
             {% endif %}
         </div>
         {% endif %}
@@ -181,7 +181,7 @@
     <!-- Информация о роли -->
     <section class="role-info-section">
         <div class="alert alert-success">
-            <strong>🔐 Ваша роль:</strong> {{ user_role|upper }}
+            <strong> Ваша роль:</strong> {{ user_role|upper }}
             {% if is_admin %}
             | Полный доступ ко всем функциям системы
             {% elif is_dispatcher %}

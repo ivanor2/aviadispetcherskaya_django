@@ -47,11 +47,11 @@
 
         <!-- Маршрут -->
         <div class="section">
-            <div class="section-title">✈️ Маршрут / Itinerary</div>
+            <div class="section-title"> Маршрут / Itinerary</div>
 
             <div class="route-block">
                 <div class="route-point">
-                    <!-- ✅ НАЗВАНИЕ АЭРОПОРТА ВМЕСТО ICAO -->
+                    <!--  НАЗВАНИЕ АЭРОПОРТА ВМЕСТО ICAO -->
                     <div class="airport-code">{{ flight.departure_airport_name|default:"Неизвестно" }}</div>
                     <div class="airport-name">{{ flight.departure_city|default:"" }}</div>
                     <div class="datetime">
@@ -61,7 +61,7 @@
                 </div>
                 <div class="route-arrow">➝</div>
                 <div class="route-point">
-                    <!-- ✅ НАЗВАНИЕ АЭРОПОРТА ВМЕСТО ICAO -->
+                    <!--  НАЗВАНИЕ АЭРОПОРТА ВМЕСТО ICAO -->
                     <div class="airport-code">{{ flight.arrival_airport_name|default:"Неизвестно" }}</div>
                     <div class="airport-name">{{ flight.arrival_city|default:"" }}</div>
                     <div class="datetime">
@@ -86,11 +86,11 @@
                 </tr>
                 <tr>
                     <td class="label">Багаж / Baggage</td>
-                    <td class="value">{% if booking.baggage_allowed %}✅ Включён / Included{% else %}❌ Не включён / Not included{% endif %}</td>
+                    <td class="value">{% if booking.baggage_allowed %} Включён / Included{% else %}❌ Не включён / Not included{% endif %}</td>
                 </tr>
                 <tr>
                     <td class="label">Статус / Status</td>
-                    <td class="value">✅ Подтверждено / Confirmed</td>
+                    <td class="value"> Подтверждено / Confirmed</td>
                 </tr>
             </table>
         </div>
@@ -131,7 +131,7 @@
         <!-- Футер -->
         <div class="ticket-footer">
             <p class="disclaimer">
-                ⚠️ Данный документ является подтверждением бронирования.
+                 Данный документ является подтверждением бронирования.
                 Для посадки на рейс необходим документ, удостоверяющий личность.
             </p>
             <p class="disclaimer">

@@ -2,8 +2,8 @@
 {% block title %}Все пассажиры{% endblock %}
 {% block content %}
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-    <h1>👥 Пассажиры</h1>
-    <a href="{% url 'app:passenger_create' %}" class="btn btn-primary">➕ Зарегистрировать</a>
+    <h1>Пассажиры</h1>
+    <a href="{% url 'app:passenger_create' %}" class="btn btn-primary">Зарегистрировать</a>
 </div>
 
 <!-- Форма поиска -->
@@ -22,49 +22,42 @@
                    placeholder="Введите паспорт или ФИО..." value="{{ search_form.query|default:'' }}">
         </div>
         <div class="search-actions" style="display: flex; gap: 0.5rem;">
-            <button type="submit" class="btn btn-primary">🔍 Найти</button>
-            <a href="{% url 'app:passenger_list' %}" class="btn btn-secondary">✕ Сбросить</a>
+            <button type="submit" class="btn btn-primary">Найти</button>
+            <a href="{% url 'app:passenger_list' %}" class="btn btn-secondary">Сбросить</a>
         </div>
     </div>
 </form>
 
 <!-- Список пассажиров -->
 {% if passengers %}
-<div class="passengers-table-container">
-    <table class="passengers-table" style="width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-        <thead>
-            <tr style="background: #f8f9fa;">
-                <th style="padding: 1rem; text-align: left;">ФИО</th>
-                <th style="padding: 1rem; text-align: left;">Паспорт</th>
-                <th style="padding: 1rem; text-align: left;">Дата рождения</th>
-                <th style="padding: 1rem; text-align: center;">Бронирования</th>
-                <th style="padding: 1rem; text-align: center;">Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for passenger in passengers %}
-            <tr>
-               <td data-label="ФИО"><strong>{{ passenger.full_name }}</strong></td>
-                <td data-label="Паспорт">{{ passenger.passport_number }}</td>
-                <td data-label="Дата рождения">{{ passenger.birth_date|date:"d.m.Y" }}</td>
-                <td data-label="Бронирования">
-                    <span class="badge">{{ passenger.bookings_count|default:0 }}</span>
-                </td>
-                <td class="actions-cell" data-label="Действия">
-                    <a href="{% url 'app:passenger_detail' pk=passenger.id %}" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
-                    {% if user_role == 'admin' %}
-                        <form method="post" action="{% url 'app:passenger_delete' pk=passenger.id %}"
-                              style="display:inline;"
-                              onsubmit="return confirm('⚠️ Удалить пассажира {{ passenger.full_name }}?');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-danger" title="Удалить">🗑️</button>
-                        </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="cards-grid-single">
+    {% for passenger in passengers %}
+    <article class="passenger-card-single">
+        <div class="passenger-card-single-content">
+            <div class="passenger-card-single-main">
+                <span class="passenger-name"><strong>{{ passenger.full_name }}</strong></span>
+            </div>
+            <div class="passenger-details">
+                <span class="detail-item">Паспорт: {{ passenger.passport_number }}</span>
+                <span class="detail-item">Дата рождения: {{ passenger.birth_date|date:"d.m.Y" }}</span>
+            </div>
+        </div>
+        <div class="passenger-card-single-side">
+            <span class="badge">Бронирований: {{ passenger.bookings_count|default:0 }}</span>
+        </div>
+        <div class="passenger-card-single-actions">
+            <a href="{% url 'app:passenger_detail' pk=passenger.id %}" class="btn btn-sm btn-outline" title="Подробнее">Подробнее</a>
+            {% if user_role == 'admin' %}
+                <form method="post" action="{% url 'app:passenger_delete' pk=passenger.id %}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Удалить пассажира {{ passenger.full_name }}?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" title="Удалить">Удалить</button>
+                </form>
+            {% endif %}
+        </div>
+    </article>
+    {% endfor %}
 </div>
 
 <!-- Пагинация -->
@@ -87,7 +80,7 @@
 {% else %}
 <div class="empty-state" style="text-align: center; padding: 3rem; color: #666; background: #fff; border-radius: 8px; margin-top: 1rem;">
     <p style="font-size: 1.2rem; margin-bottom: 1rem;">Пассажиры не найдены</p>
-    <a href="{% url 'app:passenger_create' %}" class="btn btn-primary">➕ Зарегистрировать первого пассажира</a>
+    <a href="{% url 'app:passenger_create' %}" class="btn btn-primary">Зарегистрировать первого пассажира</a>
 </div>
 {% endif %}
 {% endblock %}
