@@ -5,16 +5,16 @@
 
 {% block content %}
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-    <h1>✈️ Авиарейсы</h1>
+    <h1>Авиарейсы</h1>
     <div style="display: flex; gap: 10px; align-items: center;">
-        <a href="{% url 'app:flight_create' %}" class="btn btn-primary">➕ Добавить рейс</a>
+        <a href="{% url 'app:flight_create' %}" class="btn btn-primary">Добавить рейс</a>
 
         {% if is_admin %}
         <form method="post" action="{% url 'app:flight_delete_all' %}" style="display: inline;">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('⚠️ ВНИМАНИЕ! Вы уверены, что хотите удалить ВСЕ рейсы и связанные бронирования?\nЭто действие нельзя отменить.');">
-                🗑️ Удалить все рейсы
+                    onclick="return confirm('ВНИМАНИЕ! Вы уверены, что хотите удалить ВСЕ рейсы и связанные бронирования?\nЭто действие нельзя отменить.');">
+                Удалить все рейсы
             </button>
         </form>
         {% endif %}
@@ -37,59 +37,46 @@
             {% endif %}
         </div>
         <div class="search-actions">
-            <button type="submit" class="btn btn-primary">🔍 Найти</button>
-            <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">✕ Сбросить</a>
+            <button type="submit" class="btn btn-primary">Найти</button>
+            <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">Сбросить</a>
         </div>
     </div>
 </form>
 
 <!-- Список рейсов -->
 {% if flights %}
-<div class="flights-table-container">
-    <table class="flights-table">
-        <thead>
-            <tr>
-                <th>№ рейса</th>
-                <th>Авиакомпания</th>
-                <th>Маршрут</th>
-                <th>Дата и время</th>
-                <th>Места</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for flight in flights %}
-            <tr class="flight-row {% if flight.free_seats == 0 %}sold-out{% endif %}">
-                 <td data-label="Рейс"><strong>{{ flight.flight_number }}</strong></td>
-                <td data-label="Авиакомпания">{{ flight.airline_name }}</td>
-                <td data-label="Маршрут">
-                    <span class="route-mini">
-                        {{ flight.departure_airport_name }}
-                        <span class="arrow">→</span>
-                        {{ flight.arrival_airport_name }}
-                    </span>
-                </td>
-                <td data-label="Дата и время">
-                    {{ flight.departure_date|date:"d.m.Y" }}<br>
-                    <small>{{ flight.departure_time|time:"H:i" }}</small>
-                </td>
-                <td data-label="Места">
-                    <span class="seats-badge {% if flight.free_seats == 0 %}sold-out{% endif %}">
-                        {{ flight.free_seats }}/{{ flight.total_seats }}
-                    </span>
-                </td>
-                <td class="actions-cell" data-label="Действия">
-                    {% if flight.id %}
-                        <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-sm btn-outline" title="Подробнее">👁️</a>
-                        <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-sm btn-success" title="Продать билет" {% if flight.free_seats == 0 %}disabled{% endif %}>🎫</a>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6" class="text-center">Рейсы не найдены</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="cards-grid-single">
+    {% for flight in flights %}
+    <article class="flight-card-single">
+        <div class="flight-card-single-content">
+            <div class="flight-card-single-main">
+                <span class="flight-number"><strong>{{ flight.flight_number }}</strong></span>
+                <span class="airline-badge">{{ flight.airline_name }}</span>
+            </div>
+            <div class="route-mini">
+                {{ flight.departure_airport_name }}
+                <span class="arrow">→</span>
+                {{ flight.arrival_airport_name }}
+            </div>
+            <div class="schedule-mini">
+                <span>{{ flight.departure_date|date:"d.m.Y" }} {{ flight.departure_time|time:"H:i" }}</span>
+            </div>
+        </div>
+        <div class="flight-card-single-side">
+            <span class="seats-badge {% if flight.free_seats == 0 %}sold-out{% endif %}">
+                Мест: {{ flight.free_seats }}/{{ flight.total_seats }}
+            </span>
+        </div>
+        <div class="flight-card-single-actions">
+            {% if flight.id %}
+                <a href="{% url 'app:flight_detail' flight.id %}" class="btn btn-sm btn-outline" title="Подробнее">Подробнее</a>
+                <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-sm btn-success" title="Продать билет" {% if flight.free_seats == 0 %}disabled{% endif %}>Купить</a>
+            {% endif %}
+        </div>
+    </article>
+    {% empty %}
+    <div class="empty-state">Рейсы не найдены</div>
+    {% endfor %}
 </div>
 
 <!-- Пагинация -->
@@ -113,7 +100,7 @@
     {% if search_form.query.value %}
         <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">Показать все рейсы</a>
     {% else %}
-        <a href="{% url 'app:flight_create' %}" class="btn btn-primary">➕ Добавить первый рейс</a>
+        <a href="{% url 'app:flight_create' %}" class="btn btn-primary">Добавить первый рейс</a>
     {% endif %}
 </div>
 {% endif %}

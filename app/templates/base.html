@@ -7,7 +7,7 @@
     <title>{% block title %}АРМ Диспетчера Аэропорта{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/forms.css' %}">
     <link rel="stylesheet" href="{% static 'css/auth.css' %}">
-    <link rel="stylesheet" href="{% static 'css/main.css' %}"> <!-- ✅ НОВОЕ -->
+    <link rel="stylesheet" href="{% static 'css/main.css' %}"> <!--  НОВОЕ -->
     {% block extra_css %}{% endblock %}
 </head>
 <!-- ... остальная часть head ... -->
@@ -15,7 +15,7 @@
     {% if is_authenticated %}
     <nav class="navbar">
         <div class="container">
-            <a href="{% url 'app:index' %}" class="navbar-brand">✈️ АвиаДиспетчер</a>
+            <a href="{% url 'app:index' %}" class="navbar-brand"> АвиаДиспетчер</a>
             <ul class="navbar-nav">
                 <li><a href="{% url 'app:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">Главная</a></li>
                 <li><a href="{% url 'app:flight_list' %}" class="{% if 'flight' in request.resolver_match.url_name %}active{% endif %} {% if not can_manage_flights %}disabled{% endif %}">Рейсы</a></li>
@@ -33,7 +33,7 @@
                         <span class="user-role">{{ user_role|upper }}</span>
                     {% endif %}
                 </div>
-                <a href="{% url 'app:logout' %}" class="btn-logout">🚪 Выход</a>
+                <a href="{% url 'app:logout' %}" class="btn-logout"> Выход</a>
             </div>
         </div>
     </nav>
@@ -66,5 +66,6 @@
     {% endif %}
 
     {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/searchable-select.js' %}"></script>
 </body>
 </html>

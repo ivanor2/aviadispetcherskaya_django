@@ -2,39 +2,38 @@
 {% block title %}Аэропорты{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>🗺️ Аэропорты</h1>
-    <a href="{% url 'app:airport_create' %}" class="btn btn-primary">➕ Добавить</a>
+    <h1>Аэропорты</h1>
+    <a href="{% url 'app:airport_create' %}" class="btn btn-primary">Добавить</a>
 </div>
-<div class="form-container">
+<div class="cards-grid-single">
     {% if items %}
-    <table>
-        <thead><tr><th>ICAO</th><th>Название</th><th>Действия</th></tr></thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td><strong>{{ item.icao_code }}</strong></td>
-                <td>{{ item.name }}</td>
-                <td>
-                    <a href="{% url 'app:airport_update' item.id %}" class="btn btn-sm btn-primary">✏️ Изменить</a>
-                    <form method="post" action="{% url 'app:airport_delete' item.id %}" style="display:inline;" onsubmit="return confirm('Удалить аэропорт?');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger">🗑️ Удалить</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% for item in items %}
+    <article class="airport-card-single">
+        <div class="airport-card-single-content">
+            <div class="airport-card-single-main">
+                <span class="airport-code"><strong>{{ item.icao_code }}</strong></span>
+                <span class="airport-name">{{ item.name }}</span>
+            </div>
+        </div>
+        <div class="airport-card-single-actions">
+            <a href="{% url 'app:airport_update' item.id %}" class="btn btn-sm btn-primary">Изменить</a>
+            <form method="post" action="{% url 'app:airport_delete' item.id %}" style="display:inline;" onsubmit="return confirm('Удалить аэропорт?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+            </form>
+        </div>
+    </article>
+    {% endfor %}
     {% else %}
     <p class="empty-state">Аэропорты не найдены</p>
     {% endif %}
-
-    {% if page_obj.has_previous or page_obj.has_next %}
-    <div class="form-actions" style="justify-content: center; margin-top: 1rem;">
-        {% if page_obj.has_previous %}<a href="?page={{ page_obj.number|add:'-1' }}" class="btn btn-secondary">← Назад</a>{% endif %}
-        <span class="stat-label">Страница {{ page_obj.number }} из {{ page_obj.pages }}</span>
-        {% if page_obj.has_next %}<a href="?page={{ page_obj.number|add:'1' }}" class="btn btn-secondary">Вперёд →</a>{% endif %}
-    </div>
-    {% endif %}
 </div>
+
+{% if page_obj.has_previous or page_obj.has_next %}
+<div class="form-actions" style="justify-content: center; margin-top: 1rem;">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.number|add:'-1' }}" class="btn btn-secondary">Назад</a>{% endif %}
+    <span class="stat-label">Страница {{ page_obj.number }} из {{ page_obj.pages }}</span>
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.number|add:'1' }}" class="btn btn-secondary">Вперёд</a>{% endif %}
+</div>
+{% endif %}
 {% endblock %}
