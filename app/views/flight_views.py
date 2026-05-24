@@ -156,7 +156,7 @@ class FlightDetailView(TemplateView):
                     flight_data = full_data['flight']
                 passengers_data = full_data.get('passengers', [])
         except Exception as e:
-            print(f"⚠️ Не удалось загрузить пассажиров для рейса {kwargs.get('pk')}: {e}")
+            print(f"Не удалось загрузить пассажиров для рейса {kwargs.get('pk')}: {e}")
 
         airlines_map = _fetch_airlines_map(self.request)
         airports_map = _fetch_airports_map(self.request)

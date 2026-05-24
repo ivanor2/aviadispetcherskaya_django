@@ -93,14 +93,14 @@ class BookingForm(forms.Form):
                     arr = f.get('arrivalAirportIcao') or f.get('arrival_airport_icao', '?')
                     date = f.get('departureDate') or f.get('departure_date', '?')
 
-                    label = f"✈️ {fnum} | {dep} → {arr} | {date} (мест: {free_seats})"
+                    label = f"Рейс {fnum} | {dep} → {arr} | {date} (мест: {free_seats})"
                     flight_choices.append((fid, label))
 
                 self.fields['connection_flight_id'].choices = flight_choices
 
             except Exception as e:
                 logger.error(f"BookingForm: Ошибка загрузки данных: {e}")
-                self.passenger_choices.append(('', '⚠️ Ошибка подключения к API'))
+                self.passenger_choices.append(('', 'Ошибка подключения к API'))
 
     def clean(self):
         cleaned_data = super().clean()
