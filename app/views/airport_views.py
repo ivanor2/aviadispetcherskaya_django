@@ -48,13 +48,26 @@ class AirportUpdateView(FormView):
         if request.session.get('user_role') != 'admin':
             messages.error(request, 'Доступ запрещён'); return redirect('app:index')
         return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs); ctx.update(_get_role_perms(self.request)); ctx['title'] = 'Редактировать аэропорт'
+        ctx = super().get_context_data(**kwargs)
+        ctx.update(_get_role_perms(self.request))
+        ctx['title'] = 'Редактировать аэропорт'
         token = _get_token(self.request)
-        data = AirportController.get_by_id(kwargs['pk'], token)
-        if not data: messages.error(self.request, 'Аэропорт не найден'); return redirect('app:airport_list')
-        ctx['form'] = self.get_form(initial={'icao_code': data.get('icao_code'), 'name': data.get('name')})
+
+        # ОШИБКА БЫЛА ЗДЕСЬ: kwargs['pk'] заменяем на self.kwargs['pk']
+        data = AirportController.get_by_id(self.kwargs['pk'], token)
+
+        if not data:
+            messages.error(self.request, 'Аэропорт не найден')
+            return redirect('app:airport_list')
+
+        # ИСПРАВЛЕНИЕ ЗДЕСЬ: получаем класс формы и передаем initial в него
+        form_class = self.get_form_class()
+        ctx['form'] = form_class(initial={'icao_code': data.get('icao_code'), 'name': data.get('name')})
+
         return ctx
+
     def form_valid(self, form):
         token = _get_token(self.request)
         success, _, msg = AirportController.update(self.kwargs['pk'], {'icaoCode': form.cleaned_data['icao_code'], 'name': form.cleaned_data['name']}, token)

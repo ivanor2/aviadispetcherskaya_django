@@ -48,13 +48,26 @@ class AirlineUpdateView(FormView):
         if request.session.get('user_role') != 'admin':
             messages.error(request, 'Доступ запрещён'); return redirect('app:index')
         return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs); ctx.update(_get_role_perms(self.request)); ctx['title'] = 'Редактировать авиакомпанию'
+        ctx = super().get_context_data(**kwargs)
+        ctx.update(_get_role_perms(self.request))
+        ctx['title'] = 'Редактировать авиакомпанию'
         token = _get_token(self.request)
-        data = AirlineController.get_by_code(kwargs['code'], token)
-        if not data: messages.error(self.request, 'Авиакомпания не найдена'); return redirect('app:airline_list')
-        ctx['form'] = self.get_form(initial={'code': data.get('code'), 'name': data.get('name')})
+
+        # ОШИБКА БЫЛА ЗДЕСЬ: kwargs['code'] заменяем на self.kwargs['code']
+        data = AirlineController.get_by_code(self.kwargs['code'], token)
+
+        if not data:
+            messages.error(self.request, 'Авиакомпания не найдена')
+            return redirect('app:airline_list')
+
+        # ИСПРАВЛЕНИЕ ЗДЕСЬ: получаем класс формы и передаем initial в него
+        form_class = self.get_form_class()
+        ctx['form'] = form_class(initial={'code': data.get('code'), 'name': data.get('name')})
+
         return ctx
+
     def form_valid(self, form):
         token = _get_token(self.request)
         success, _, msg = AirlineController.update(self.kwargs['code'], {'code': form.cleaned_data['code'], 'name': form.cleaned_data['name']}, token)

@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}{{ title|default:"Добавить рейс" }}{% endblock %}
+
 {% block content %}
 <div class="form-container">
     <h2>{{ title|default:"Новый авиарейс" }}</h2>
+
     <form method="post" class="flight-form">
         {% csrf_token %}
 
@@ -21,21 +24,21 @@
                 </label>
                 {{ form.airline }}
                 {% if form.airline.errors %}
-                <small class="error">{{ form.airline.errors.0 }}</small>
+                    <small class="error">{{ form.airline.errors.0 }}</small>
                 {% endif %}
             </div>
 
             <!-- Авиакомпания -->
-            <div class="form-group">
+           <div class="form-group">
                 <label for="{{ form.flight_number.id_for_label }}">
                     Номер рейса (цифры) <span class="required">*</span>
                 </label>
                 {{ form.flight_number }}
                 {% if form.flight_number.errors %}
-                <small class="error">{{ form.flight_number.errors.0 }}</small>
+                    <small class="error">{{ form.flight_number.errors.0 }}</small>
                 {% endif %}
                 <small class="help-text">Итоговый номер: <span id="preview-number" style="font-weight: bold; color: #4fc3f7;">---</span></small>
-            </div>
+           </div>
 
             <!-- Аэропорты -->
             <div class="form-group">
@@ -74,19 +77,58 @@
                 </label>
                 {{ form.total_seats }}
             </div>
-        </div>
 
-        <div class="form-group">
-            <label for="{{ form.arrival_time.id_for_label }}">
-                Время прибытия <span class="required">*</span>
-            </label>
-            {{ form.arrival_time }}
+            <div class="form-group">
+                <label for="{{ form.arrival_time.id_for_label }}">
+                    Время прибытия <span class="required">*</span>
+                </label>
+                {{ form.arrival_time }}
+                {% if form.arrival_time.errors %}
+                    <small class="error">{{ form.arrival_time.errors.0 }}</small>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.base_price.id_for_label }}">
+                    Базовая цена <span class="required">*</span>
+                </label>
+                {{ form.base_price }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.baggage_price.id_for_label }}">
+                    Цена багажа <span class="required">*</span>
+                </label>
+                {{ form.baggage_price }}
+            </div>
+
+
+
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
             <a href="{% url 'app:flight_list' %}" class="btn btn-secondary"> Отмена</a>
         </div>
     </form>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Находим все теги <select> на странице
+        document.querySelectorAll('select').forEach(function(selectElement) {
+            // Применяем к каждому из них Tom Select
+            new TomSelect(selectElement, {
+                create: false,         // Запрещаем пользователю создавать новые пункты
+                maxOptions: 2000,      // Увеличиваем лимит отображаемых результатов поиска
+                placeholder: 'Начните вводить для поиска...',
+                // Если хочешь, чтобы при открытии список не сортировался сам по себе, а оставался как в Django:
+                sortField: {
+                    field: "$order"
+                }
+            });
+        });
+    });
+    </script>
 </div>
 {% endblock %}

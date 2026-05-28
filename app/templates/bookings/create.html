@@ -17,12 +17,19 @@
          <label>Пассажиры и места <span class="required">*</span></label>
          <div id="passengers-container">
              <div class="passenger-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+
                  <select name="passenger_ids" class="form-select" style="flex: 2;" required>
                      {% for val, label in passenger_choices %}
                          <option value="{{ val }}">{{ label }}</option>
                      {% endfor %}
                  </select>
-                 <input type="text" name="seats" class="form-control" style="flex: 1;" placeholder="Место (опц.)">
+
+                 <select name="seats" class="form-select" style="flex: 1;">
+                     {% for val, label in form.seat_choices %}
+                         <option value="{{ val }}">{{ label }}</option>
+                     {% endfor %}
+                 </select>
+
                  <button type="button" class="btn btn-sm btn-success add-btn" title="Добавить пассажира">+</button>
              </div>
          </div>
@@ -34,7 +41,7 @@
 
         <hr class="my-4">
 
-        <!-- === НОВЫЕ ПОЛЯ: Детали билета === -->
+
         <div class="form-grid">
             <div class="form-group">
                 {{ form.class_type.label_tag }}
@@ -42,31 +49,30 @@
             </div>
 
             <div class="form-group">
-                {{ form.baggage_allowed.label_tag }}
-                {{ form.baggage_allowed }}
-            </div>
-
-            <div class="form-group">
                 {{ form.payment_type.label_tag }}
                 {{ form.payment_type }}
             </div>
+
+            <div class="form-group">
+                {{ form.custom_additional_fee.label_tag }}
+                {{ form.custom_additional_fee }}
+                {% if form.custom_additional_fee.help_text %}
+                    <small class="help-text">{{ form.custom_additional_fee.help_text }}</small>
+                {% endif %}
+            </div>
         </div>
 
-        <h4>💰 Стоимость</h4>
-        <div class="form-grid">
-            <div class="form-group">
-                {{ form.base_price.label_tag }}
-                {{ form.base_price }}
-            </div>
-            <div class="form-group">
-                {{ form.tax.label_tag }}
-                {{ form.tax }}
-            </div>
-            <div class="form-group">
-                {{ form.additional_fees.label_tag }}
-                {{ form.additional_fees }}
-            </div>
+        <div class="form-group" style="flex-direction: row; align-items: center; margin-top: 1rem; margin-bottom: 2rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+            {{ form.baggage_allowed }}
+            <label for="{{ form.baggage_allowed.id_for_label }}" style="margin: 0; cursor: pointer; font-weight: bold; margin-left: 10px;">
+                {{ form.baggage_allowed.label }}
+                {% if flight.baggage_price or flight.baggagePrice %}
+                    <span style="color: #4fc3f7;">(+ {{ flight.baggagePrice|default:flight.baggage_price }} руб.)</span>
+                {% endif %}
+            </label>
         </div>
+
+
 
         <hr class="my-4">
 
@@ -92,9 +98,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const firstRow = container.querySelector('.passenger-row');
             const newRow = firstRow.cloneNode(true);
 
-            // Очищаем значения в новой строке
-            newRow.querySelector('select').value = '';
-            newRow.querySelector('input[name="seats"]').value = '';
+            // Очищаем значения в новой строке для обоих селектов
+            newRow.querySelector('select[name="passenger_ids"]').value = '';
+            newRow.querySelector('select[name="seats"]').value = ''; // Сброс на Автовыбор
 
             // Меняем кнопку на удаление
             const btn = newRow.querySelector('.add-btn');

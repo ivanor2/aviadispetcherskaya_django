@@ -100,6 +100,7 @@ class FlightCreateView(FormView):
         kwargs['access_token'] = _get_token(self.request)
         return kwargs
 
+
     def form_valid(self, form):
         airline_code = form.cleaned_data['airline']
         numeric_part = form.cleaned_data['flight_number']
@@ -114,15 +115,23 @@ class FlightCreateView(FormView):
             'departureTime': str(form.cleaned_data['departure_time']),
             'arrivalTime': str(form.cleaned_data['arrival_time']),
             'totalSeats': form.cleaned_data['total_seats'],
+            'freeSeats': form.cleaned_data['total_seats'],
+            'basePrice': form.cleaned_data['base_price'],
+            'baggagePrice': form.cleaned_data['baggage_price']
         }
-
+        print("!!! ФОРМА ВАЛИДНА, СОБИРАЕМ ДАННЫЕ !!!")
         success, data, message = FlightController.create_flight(payload, _get_token(self.request))
+        print(f"!!! ОТВЕТ ОТ API: success={success}, message={message} !!!")
         if success:
             messages.success(self.request, message)
             return super().form_valid(form)
 
         messages.error(self.request, message)
         return self.form_invalid(form)
+
+        def form_invalid(self, form):
+            print("!!! ОШИБКА ВАЛИДАЦИИ ФОРМЫ DJANGO !!!", form.errors)  # <-- и это
+            return super().form_invalid(form)
 
 
 class FlightDetailView(TemplateView):

@@ -48,6 +48,17 @@ class FlightForm(forms.Form):
         widget=forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'})
     )
 
+    base_price = forms.FloatField(
+        label="Базовая цена билета",
+        min_value=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    baggage_price = forms.FloatField(
+        label="Цена багажа",
+        min_value=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+
     def __init__(self, *args, access_token=None, **kwargs):
         super().__init__(*args, **kwargs)
         headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
@@ -58,18 +69,31 @@ class FlightForm(forms.Form):
             if resp.status_code == 200:
                 airlines = resp.json()
                 self.fields['airline'].choices = [('', '---------')] + \
-                    [(a['code'], f"{a['code']} — {a['name']}") for a in airlines]
+                                                 [(a['code'], f"{a['code']} — {a['name']}") for a in airlines]
         except Exception:
             pass
 
-        # Загрузка аэропортов
+        # Загрузка аэропортов (через цикл для обхода лимита)
         try:
-            resp = requests.get(f"{settings.API_BASE_URL}/airports", params={'page': 1, 'size': 100}, headers=headers, timeout=5)
-            if resp.status_code == 200:
-                airports = resp.json().get('items', [])
-                choices = [('', '---------')] + [(str(a['icao_code']), f"{a['icao_code']} — {a['name']}") for a in airports]
-                self.fields['departure_airport'].choices = choices
-                self.fields['arrival_airport'].choices = choices
+            airports = []
+            page = 1
+            while True:
+                resp = requests.get(f"{settings.API_BASE_URL}/airports", params={'page': page, 'size': 100},
+                                    headers=headers, timeout=5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    airports.extend(data.get('items', []))
+
+                    # Проверяем, есть ли еще страницы
+                    if page >= data.get('pages', 1):
+                        break
+                    page += 1
+                else:
+                    break
+
+            choices = [('', '---------')] + [(str(a['icao_code']), f"{a['icao_code']} — {a['name']}") for a in airports]
+            self.fields['departure_airport'].choices = choices
+            self.fields['arrival_airport'].choices = choices
         except Exception:
             pass
 
