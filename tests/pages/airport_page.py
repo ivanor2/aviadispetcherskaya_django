@@ -1,0 +1,50 @@
+from .base_page import BasePage
+from selenium.webdriver.common.by import By
+
+class AirportPage(BasePage):
+    @property
+    def icao_field(self): return (By.ID, "id_icao_code")
+    @property
+    def name_field(self): return (By.ID, "id_name")
+    @property
+    def submit_btn(self): return (By.CSS_SELECTOR, "button[type='submit']")
+    @property
+    def airport_rows(self): return (By.CSS_SELECTOR, "table tbody tr")
+
+    def go_to_list(self):
+        self.open("/airports/")
+        return self
+
+    def go_to_create(self):
+        self.open("/airports/create/")
+        return self
+
+    def create_airport(self, icao: str, name: str):
+        self.go_to_create()
+        self.input_text(self.icao_field, icao)
+        self.input_text(self.name_field, name)
+        self.click(self.submit_btn)
+        self.wait_for_url("/airports/")
+        return self
+
+    def edit_airport(self, pk: str, new_name: str):
+        self.open(f"/airports/{pk}/edit/")
+        self.input_text(self.name_field, new_name)
+        self.click(self.submit_btn)
+        self.wait_for_url("/airports/")
+        return self
+
+    def delete_airport(self, icao: str):
+        # Find row by ICAO and click delete
+        self.go_to_list()
+        rows = self.find_all((By.CSS_SELECTOR, "table tbody tr"))
+        for row in rows:
+            if icao in row.text:
+                delete_btn = row.find_element(By.CSS_SELECTOR, "button.btn-danger, form[action*='delete'] button[type='submit']")
+                delete_btn.click()
+                break
+        try:
+            self.driver.switch_to.alert.accept()
+        except:
+            pass
+        return self

@@ -25,12 +25,13 @@ class AuthPage(BasePage):
         self.click(self.register_btn)
         return self
 
-    def login(self, username, password):
+    def login(self, username, password, expect_success=True):
         self.open("/login/")
         self.input_text(self.username_field, username)
         self.input_text(self.password_field, password)
         self.click(self.login_btn)
-        self.wait_for_url("/")
+        if expect_success:
+            self.wait_for_url("/")
         return self
 
     def logout(self):

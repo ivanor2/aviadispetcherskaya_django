@@ -27,7 +27,7 @@ def test_logout_redirects_to_login(auth_page):
     assert "/login/" in auth_page.driver.current_url, "После выхода не произошел редирект на страницу логина"
 
 def test_login_with_wrong_password(auth_page):
-    auth_page.login("nonexistent_user", "WrongPass!")
+    auth_page.login("nonexistent_user", "WrongPass!", expect_success=False)
     msg, status = auth_page.get_alert_message()
     assert status == "error", "При неверном пароле не появилась ошибка"
     assert "Неверный логин или пароль" in msg or "Ошибка" in msg

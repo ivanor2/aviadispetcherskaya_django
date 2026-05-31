@@ -53,5 +53,8 @@ class BasePage:
                 return "", "none"
 
     def wait_for_url(self, expected_path):
-        self.wait.until(EC.url_contains(expected_path))
+        if expected_path == "/":
+            self.wait.until(lambda d: d.current_url.rstrip("/") == BASE_URL.rstrip("/"))
+        else:
+            self.wait.until(EC.url_contains(expected_path))
         return self
