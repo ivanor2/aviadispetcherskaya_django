@@ -6,7 +6,7 @@ faker = Faker("en_US")
 def test_create_airport(auth_page, airport_page, test_credentials):
     auth_page.login(test_credentials[0], test_credentials[1])
     
-    icao = faker.lexify("????").upper()
+    icao = f"SU{faker.lexify('??').upper()}"
     name = f"Airport {icao}"
     
     airport_page.create_airport(icao, name)

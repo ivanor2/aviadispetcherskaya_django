@@ -23,7 +23,7 @@ class FlightPage(BasePage):
     @property
     def search_btn(self): return (By.CSS_SELECTOR, "button[type='submit']")
     @property
-    def flight_rows(self): return (By.CSS_SELECTOR, ".flight-row")
+    def flight_rows(self): return (By.CSS_SELECTOR, ".flight-card-single, .flight-row")
     @property
     def nav_flights_link(self): return (By.CSS_SELECTOR, "a[href*='/flights']")
 
@@ -34,13 +34,33 @@ class FlightPage(BasePage):
     def create_flight(self, number: str, date: str, time: str, seats: int):
         self.go_to_create()
         self.input_text(self.flight_number_field, number)
-        # Выбираем первый и второй элементы по индексу (пропуская дефолтный если нужно, пусть 1 и 2)
-        from selenium.webdriver.support.ui import Select
-        Select(self.find(self.dep_airport_select)).select_by_index(1)
-        Select(self.find(self.arr_airport_select)).select_by_index(2)
+        def select_tomselect_option(select_id, is_arrival=False):
+            script = f"""
+            var ts = document.getElementById('{select_id}').tomselect;
+            var keys = Object.keys(ts.options).filter(k => k !== "");
+            if(keys.length > 0) {{
+                var idx = 0;
+                if ('{select_id}' === 'id_arrival_airport' && keys.length > 1) {{
+                    idx = 1;
+                }}
+                ts.setValue(keys[idx]);
+            }}
+            """
+            self.driver.execute_script(script)
+            
+        select_tomselect_option('id_airline')
+        select_tomselect_option('id_departure_airport')
+        select_tomselect_option('id_arrival_airport')
+        
         self.input_text(self.dep_date_field, date)
         self.input_text(self.dep_time_field, time)
         self.input_text(self.total_seats_field, str(seats))
+        
+        # Заполнение недостающих полей
+        self.input_text((By.ID, "id_arrival_time"), "16:30")
+        self.input_text((By.ID, "id_base_price"), "100.00")
+        self.input_text((By.ID, "id_baggage_price"), "20.00")
+        
         self.click(self.save_btn)
         self.wait_for_url("/flights/")
         return self

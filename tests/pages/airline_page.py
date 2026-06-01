@@ -37,10 +37,10 @@ class AirlinePage(BasePage):
     def delete_airline(self, code: str):
         # Admin action - assumed POST to delete URL or button in list
         self.go_to_list()
-        rows = self.find_all((By.CSS_SELECTOR, "table tbody tr"))
-        for row in rows:
-            if code in row.text:
-                delete_btn = row.find_element(By.CSS_SELECTOR, "button.btn-danger, form[action*='delete'] button[type='submit']")
+        cards = self.find_all((By.CSS_SELECTOR, ".airline-card-single, table tbody tr"))
+        for card in cards:
+            if code in card.text:
+                delete_btn = card.find_element(By.CSS_SELECTOR, "button.btn-danger, form[action*='delete'] button[type='submit']")
                 delete_btn.click()
                 break
         # Accept alert if there is one

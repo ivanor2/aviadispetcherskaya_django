@@ -35,14 +35,18 @@ class PassengerPage(BasePage):
     def search_passenger(self, query: str):
         self.open("/passengers/")
         search_input = (By.ID, "query")
+        search_type = (By.ID, "search_type")
         search_btn = (By.CSS_SELECTOR, "button[type='submit']")
+        
+        from selenium.webdriver.support.ui import Select
+        Select(self.find(search_type)).select_by_value("passport")
         self.input_text(search_input, query)
         self.click(search_btn)
         return self
 
     def get_passenger_count(self) -> int:
         try:
-            return len(self.find_all((By.CSS_SELECTOR, ".passenger-row, table tbody tr")))
+            return len(self.find_all((By.CSS_SELECTOR, ".passenger-card-single, .passenger-row, table tbody tr")))
         except:
             return 0
 

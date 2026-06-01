@@ -56,5 +56,5 @@ class BasePage:
         if expected_path == "/":
             self.wait.until(lambda d: d.current_url.rstrip("/") == BASE_URL.rstrip("/"))
         else:
-            self.wait.until(EC.url_contains(expected_path))
+            self.wait.until(lambda d: expected_path.strip("/") in d.current_url.split("/") and not d.current_url.endswith("/create/"))
         return self

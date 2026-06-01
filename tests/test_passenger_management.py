@@ -7,7 +7,7 @@ def test_create_and_list_passenger(auth_page, passenger_page, test_credentials):
     auth_page.login(test_credentials[0], test_credentials[1])
     
     fullname = faker.name()
-    passport = str(faker.random_number(digits=10, fix_len=True))
+    passport = f"{faker.random_number(digits=4, fix_len=True)}-{faker.random_number(digits=6, fix_len=True)}"
     
     # Create passenger
     passenger_page.create_passenger(
@@ -18,8 +18,8 @@ def test_create_and_list_passenger(auth_page, passenger_page, test_credentials):
         birth_date="1990-01-01"
     )
     
-    # Search for created passenger
-    passenger_page.search_passenger(fullname)
+    # Search for created passenger by passport
+    passenger_page.search_passenger(passport)
     assert passenger_page.get_passenger_count() >= 1, "Созданный пассажир не найден"
 
 def test_guest_cannot_access_passengers(auth_page, passenger_page):

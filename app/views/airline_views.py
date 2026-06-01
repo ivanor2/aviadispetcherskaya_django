@@ -41,7 +41,7 @@ class AirlineCreateView(FormView):
         messages.error(self.request, msg); return self.form_invalid(form)
 
 class AirlineUpdateView(FormView):
-    template_name = 'airlines/form.html'
+    template_name = 'airlines/edit.html'
     form_class = AirlineForm
     success_url = reverse_lazy('app:airline_list')
     def dispatch(self, request, *args, **kwargs):
@@ -49,22 +49,24 @@ class AirlineUpdateView(FormView):
             messages.error(request, 'Доступ запрещён'); return redirect('app:index')
         return super().dispatch(request, *args, **kwargs)
 
+    def get(self, request, *args, **kwargs):
+        token = _get_token(request)
+        data = AirlineController.get_by_code(self.kwargs['code'], token)
+        if not data:
+            messages.error(request, 'Авиакомпания не найдена')
+            return redirect('app:airline_list')
+        self.airline_data = data
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx.update(_get_role_perms(self.request))
         ctx['title'] = 'Редактировать авиакомпанию'
-        token = _get_token(self.request)
 
-        # ОШИБКА БЫЛА ЗДЕСЬ: kwargs['code'] заменяем на self.kwargs['code']
-        data = AirlineController.get_by_code(self.kwargs['code'], token)
-
-        if not data:
-            messages.error(self.request, 'Авиакомпания не найдена')
-            return redirect('app:airline_list')
-
-        # ИСПРАВЛЕНИЕ ЗДЕСЬ: получаем класс формы и передаем initial в него
-        form_class = self.get_form_class()
-        ctx['form'] = form_class(initial={'code': data.get('code'), 'name': data.get('name')})
+        data = getattr(self, 'airline_data', None)
+        if data:
+            form_class = self.get_form_class()
+            ctx['form'] = form_class(initial={'code': data.get('code'), 'name': data.get('name')})
 
         return ctx
 

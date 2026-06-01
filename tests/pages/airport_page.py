@@ -27,20 +27,26 @@ class AirportPage(BasePage):
         self.wait_for_url("/airports/")
         return self
 
-    def edit_airport(self, pk: str, new_name: str):
-        self.open(f"/airports/{pk}/edit/")
+    def edit_airport(self, icao: str, new_name: str):
+        self.go_to_list()
+        cards = self.find_all((By.CSS_SELECTOR, ".airport-card-single, table tbody tr"))
+        for card in cards:
+            if icao in card.text:
+                edit_btn = card.find_element(By.CSS_SELECTOR, "a[href*='/edit/']")
+                edit_btn.click()
+                break
         self.input_text(self.name_field, new_name)
         self.click(self.submit_btn)
         self.wait_for_url("/airports/")
         return self
 
     def delete_airport(self, icao: str):
-        # Find row by ICAO and click delete
+        # Find row/card by ICAO and click delete
         self.go_to_list()
-        rows = self.find_all((By.CSS_SELECTOR, "table tbody tr"))
-        for row in rows:
-            if icao in row.text:
-                delete_btn = row.find_element(By.CSS_SELECTOR, "button.btn-danger, form[action*='delete'] button[type='submit']")
+        cards = self.find_all((By.CSS_SELECTOR, ".airport-card-single, table tbody tr"))
+        for card in cards:
+            if icao in card.text:
+                delete_btn = card.find_element(By.CSS_SELECTOR, "button.btn-danger, form[action*='delete'] button[type='submit']")
                 delete_btn.click()
                 break
         try:

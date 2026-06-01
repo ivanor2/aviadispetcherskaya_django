@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title|default:"Редактирование авиакомпании" }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>{{ title|default:"Редактирование авиакомпании" }}</h2>
+
+    <form method="post" class="airline-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="form-grid">
+            {% for field in form %}
+            <div class="form-group">
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }} <span class="required">*</span>
+                </label>
+                {{ field }}
+                {% if field.errors %}
+                    <small class="error">{{ field.errors.0 }}</small>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Сохранить изменения
+            </button>
+            <a href="{% url 'app:airline_list' %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Отмена
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

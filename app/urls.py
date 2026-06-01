@@ -59,6 +59,6 @@ urlpatterns = [
     # Управление аэропортами (только admin)
     path('airports/', AirportListView.as_view(), name='airport_list'),
     path('airports/create/', AirportCreateView.as_view(), name='airport_create'),
-    path('airports/<int:pk>/edit/', AirportUpdateView.as_view(), name='airport_update'),
-    path('airports/<int:pk>/delete/', AirportDeleteView.as_view(), name='airport_delete'),
+    path('airports/<str:pk>/edit/', AirportUpdateView.as_view(), name='airport_update'),
+    path('airports/<str:pk>/delete/', AirportDeleteView.as_view(), name='airport_delete'),
 ]

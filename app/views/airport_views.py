@@ -41,7 +41,7 @@ class AirportCreateView(FormView):
         messages.error(self.request, msg); return self.form_invalid(form)
 
 class AirportUpdateView(FormView):
-    template_name = 'airports/form.html'
+    template_name = 'airports/edit.html'
     form_class = AirportForm
     success_url = reverse_lazy('app:airport_list')
     def dispatch(self, request, *args, **kwargs):
@@ -49,22 +49,24 @@ class AirportUpdateView(FormView):
             messages.error(request, 'Доступ запрещён'); return redirect('app:index')
         return super().dispatch(request, *args, **kwargs)
 
+    def get(self, request, *args, **kwargs):
+        token = _get_token(request)
+        data = AirportController.get_by_id(self.kwargs['pk'], token)
+        if not data:
+            messages.error(request, 'Аэропорт не найден')
+            return redirect('app:airport_list')
+        self.airport_data = data
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx.update(_get_role_perms(self.request))
         ctx['title'] = 'Редактировать аэропорт'
-        token = _get_token(self.request)
 
-        # ОШИБКА БЫЛА ЗДЕСЬ: kwargs['pk'] заменяем на self.kwargs['pk']
-        data = AirportController.get_by_id(self.kwargs['pk'], token)
-
-        if not data:
-            messages.error(self.request, 'Аэропорт не найден')
-            return redirect('app:airport_list')
-
-        # ИСПРАВЛЕНИЕ ЗДЕСЬ: получаем класс формы и передаем initial в него
-        form_class = self.get_form_class()
-        ctx['form'] = form_class(initial={'icao_code': data.get('icao_code'), 'name': data.get('name')})
+        data = getattr(self, 'airport_data', None)
+        if data:
+            form_class = self.get_form_class()
+            ctx['form'] = form_class(initial={'icao_code': data.get('icao_code'), 'name': data.get('name')})
 
         return ctx
 
