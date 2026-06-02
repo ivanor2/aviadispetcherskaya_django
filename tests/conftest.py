@@ -1,4 +1,7 @@
 import os
+import random
+from datetime import datetime, timedelta
+
 import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -16,8 +19,23 @@ import subprocess
 import time
 import sys
 
-BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+from faker import Faker
 
+faker = Faker("en_US")
+
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+prefixes = ['AG', 'AN', 'AY', 'BG', 'BI', 'DA', 'DB', 'DF', 'DG', 'DI', 'DN', 'DR', 'DT', 'DX', 'EB', 'ED', 'EE', 'EF', 'EG', 'EH', 'EI',
+            'EK', 'EL', 'EN', 'EP', 'ES', 'ET', 'EV', 'EY', 'FA', 'FB', 'FC', 'FD', 'FE', 'FG', 'FH', 'FI', 'FJ', 'FK', 'FL', 'FM', 'FN',
+            'FO', 'FP', 'FQ', 'FS', 'FT', 'FV', 'FW', 'FX', 'FY', 'FZ', 'GA', 'GB', 'GC', 'GE', 'GF', 'GG', 'GL', 'GM', 'GO', 'GQ', 'GS',
+            'GU', 'GV', 'HA', 'HB', 'HC', 'HD', 'HE', 'HF', 'HH', 'HK', 'HL', 'HR', 'HS', 'HT', 'HU', 'K', 'LA', 'LB', 'LC', 'LD', 'LE',
+            'LF', 'LG', 'LH', 'LI', 'LJ', 'LK', 'LL', 'LM', 'LN', 'LO', 'LP', 'LQ', 'LR', 'LS', 'LT', 'LU', 'LV', 'LW', 'LX', 'LY', 'LZ',
+            'MB', 'MD', 'MG', 'MH', 'MK', 'MM', 'MN', 'MP', 'MR', 'MS', 'MT', 'MU', 'MW', 'MY', 'MZ', 'NC', 'NF', 'NG', 'NI', 'NL', 'NS',
+            'NT', 'NV', 'NW', 'NZ', 'OA', 'OB', 'OE', 'OI', 'OJ', 'OK', 'OL', 'OM', 'OO', 'OP', 'OR', 'OS', 'OT', 'OY', 'PA', 'PB', 'PC',
+            'PF', 'PG', 'PH', 'PJ', 'PK', 'PL', 'PM', 'PO', 'PP', 'PT', 'PW', 'RC', 'RJ', 'RK', 'RO', 'RP', 'SA', 'SB', 'SC', 'SD', 'SE',
+            'SF', 'SG', 'SK', 'SL', 'SM', 'SN', 'SO', 'SP', 'SS', 'SU', 'SV', 'SW', 'SY', 'TA', 'TB', 'TD', 'TF', 'TG', 'TI', 'TJ', 'TK',
+            'TL', 'TN', 'TQ', 'TR', 'TT', 'TU', 'TV', 'TX', 'U', 'UA', 'UB', 'UC', 'UD', 'UG', 'UK', 'UM', 'UT', 'VA', 'VC', 'VD', 'VE',
+            'VG', 'VH', 'VI', 'VL', 'VM', 'VN', 'VO', 'VQ', 'VR', 'VT', 'VV', 'VY', 'WA', 'WB', 'WI', 'WM', 'WP', 'WQ', 'WR', 'WS',
+             'ZK', 'ZM']
 @pytest.fixture(scope="session", autouse=True)
 def start_dev_server():
     process = subprocess.Popen(
@@ -40,7 +58,7 @@ def test_credentials():
 def browser():
     options = Options()
     options.add_argument("--start-maximized")
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(options=options)
     yield driver
     driver.quit()
 
@@ -84,3 +102,20 @@ def airline_page(browser, wait):
 @pytest.fixture
 def airport_page(browser, wait):
     return AirportPage(browser, wait)
+
+@pytest.fixture
+def random_prefix():
+    return random.choice(prefixes)
+
+@pytest.fixture
+def valid_flight_data():
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    return {
+        "number": faker.random_number(digits=3),
+        "date": tomorrow,
+        "time": "14:30",
+        "seats": 150
+    }
+
+
+

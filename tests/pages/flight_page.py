@@ -33,37 +33,61 @@ class FlightPage(BasePage):
 
     def create_flight(self, number: str, date: str, time: str, seats: int):
         self.go_to_create()
+
+        # ✅ Ждём, пока TomSelect полностью инициализируется
+        self.wait.until(lambda d: d.execute_script(
+            "return document.getElementById('id_airline')?.tomselect !== undefined"
+        ))
+
+        # Номер рейса
         self.input_text(self.flight_number_field, number)
-        def select_tomselect_option(select_id, is_arrival=False):
+
+        # ✅ Функция выбора значения в TomSelect с retry
+        def select_tomselect(select_id, prefer_index=0):
             script = f"""
-            var ts = document.getElementById('{select_id}').tomselect;
-            var keys = Object.keys(ts.options).filter(k => k !== "");
-            if(keys.length > 0) {{
-                var idx = 0;
-                if ('{select_id}' === 'id_arrival_airport' && keys.length > 1) {{
-                    idx = 1;
-                }}
+                var ts = document.getElementById('{select_id}').tomselect;
+                if (!ts) return false;
+                var keys = Object.keys(ts.options).filter(k => k !== '' && k !== null);
+                if (keys.length === 0) return false;
+                var idx = Math.min({prefer_index}, keys.length - 1);
                 ts.setValue(keys[idx]);
-            }}
+                return true;
             """
-            self.driver.execute_script(script)
-            
-        select_tomselect_option('id_airline')
-        select_tomselect_option('id_departure_airport')
-        select_tomselect_option('id_arrival_airport')
-        
-        self.input_text(self.dep_date_field, date)
-        self.input_text(self.dep_time_field, time)
+            # Retry до 10 раз, пока не получится
+            for _ in range(20):
+                if self.driver.execute_script(script):
+                    return True
+                import time;
+                time.sleep(0.3)
+            raise Exception(f"TomSelect '{select_id}' не содержит опций")
+
+        select_tomselect('id_airline', 0)
+        select_tomselect('id_departure_airport', 0)
+        select_tomselect('id_arrival_airport', 1)  # другой аэропорт
+
+        # ✅ Поля date/time устанавливаем через JS (send_keys часто не работает)
+        self._set_input_value('id_departure_date', date)
+        self._set_input_value('id_departure_time', time)
+        self._set_input_value('id_arrival_time', '16:30')
+
         self.input_text(self.total_seats_field, str(seats))
-        
-        # Заполнение недостающих полей
-        self.input_text((By.ID, "id_arrival_time"), "16:30")
-        self.input_text((By.ID, "id_base_price"), "100.00")
-        self.input_text((By.ID, "id_baggage_price"), "20.00")
-        
+        self._set_input_value('id_base_price', '100.00')
+        self._set_input_value('id_baggage_price', '20.00')
+
         self.click(self.save_btn)
         self.wait_for_url("/flights/")
         return self
+
+    def _set_input_value(self, element_id: str, value: str):
+        """Универсальная установка значения в input (работает для date/time/number)"""
+        self.driver.execute_script(f"""
+            var el = document.getElementById('{element_id}');
+            var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value').set;
+            nativeInputValueSetter.call(el, '{value}');
+            el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        """)
 
     def search_flight(self, query: str):
         self.open("/flights/")

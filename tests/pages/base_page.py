@@ -52,9 +52,18 @@ class BasePage:
             except:
                 return "", "none"
 
+
     def wait_for_url(self, expected_path):
-        if expected_path == "/":
-            self.wait.until(lambda d: d.current_url.rstrip("/") == BASE_URL.rstrip("/"))
-        else:
-            self.wait.until(lambda d: expected_path.strip("/") in d.current_url.split("/") and not d.current_url.endswith("/create/"))
+        """Ожидание, что URL содержит expected_path (без /create/ на конце)"""
+        expected = expected_path.strip("/")
+
+        def check_url(driver):
+            url = driver.current_url
+            # Нормализуем: убираем query-параметры и trailing slash
+            clean = url.split("?")[0].rstrip("/")
+            if expected == "":
+                return clean == BASE_URL.rstrip("/")
+            return clean.endswith("/" + expected) or clean == expected
+
+        self.wait.until(check_url, message=f"URL не стал содержать '{expected_path}'. Текущий: {self.driver.current_url}")
         return self

@@ -18,7 +18,6 @@ from reportlab.lib.units import cm, mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from xhtml2pdf import pisa
 
 from app.forms import BookingForm
 from app.controllers import BookingController, FlightController, PassengerController

@@ -1,5 +1,6 @@
 from .base_page import BasePage
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 
 class AirportPage(BasePage):
     @property
@@ -28,13 +29,18 @@ class AirportPage(BasePage):
         return self
 
     def edit_airport(self, icao: str, new_name: str):
+        # Переходим на список и ждём появления карточки с нужным ICAO
         self.go_to_list()
-        cards = self.find_all((By.CSS_SELECTOR, ".airport-card-single, table tbody tr"))
-        for card in cards:
-            if icao in card.text:
-                edit_btn = card.find_element(By.CSS_SELECTOR, "a[href*='/edit/']")
-                edit_btn.click()
-                break
+
+        # ✅ Ждём, пока в DOM появится карточка именно с нашим ICAO (до 15 сек)
+        card_locator = (By.XPATH, f"//article[contains(@class, 'airport-card-single') and contains(., '{icao}')]")
+        card = self.wait.until(EC.presence_of_element_located(card_locator))
+
+        # ✅ Кликаем кнопку "Изменить" ВНУТРИ этой карточки
+        edit_btn = card.find_element(By.CSS_SELECTOR, "a[href*='/edit/']")
+        self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "a[href*='/edit/']"))).click()
+
+        # Теперь мы на /airports/<id>/edit/ — поле name точно есть
         self.input_text(self.name_field, new_name)
         self.click(self.submit_btn)
         self.wait_for_url("/airports/")
