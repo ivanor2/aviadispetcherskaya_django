@@ -26,12 +26,14 @@ class AuthPage(BasePage):
         return self
 
     def login(self, username, password, expect_success=True):
-        self.open("/login/")
+        if "/login/" not in self.driver.current_url:
+            self.open("/login/")
         self.input_text(self.username_field, username)
         self.input_text(self.password_field, password)
         self.click(self.login_btn)
         if expect_success:
-            self.wait_for_url("/")
+            # ✅ Ждем, что URL изменится и мы уйдем со страницы логина
+            self.wait.until(lambda d: "/login/" not in d.current_url, message="Login failed, URL is still /login/")
         return self
 
     def logout(self):

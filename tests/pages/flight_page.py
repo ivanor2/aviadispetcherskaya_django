@@ -1,48 +1,89 @@
 from .base_page import BasePage
 from selenium.webdriver.common.by import By
+import time
+
 
 class FlightPage(BasePage):
     @property
-    def flight_number_field(self): return (By.ID, "id_flight_number")
+    def flight_number_field(self):
+        return (By.ID, "id_flight_number")
+
     @property
-    def dep_airport_select(self): return (By.ID, "id_departure_airport")
+    def dep_airport_select(self):
+        return (By.ID, "id_departure_airport")
+
     @property
-    def arr_airport_select(self): return (By.ID, "id_arrival_airport")
+    def arr_airport_select(self):
+        return (By.ID, "id_arrival_airport")
+
     @property
-    def dep_date_field(self): return (By.ID, "id_departure_date")
+    def dep_date_field(self):
+        return (By.ID, "id_departure_date")
+
     @property
-    def dep_time_field(self): return (By.ID, "id_departure_time")
+    def dep_time_field(self):
+        return (By.ID, "id_departure_time")
+
     @property
-    def total_seats_field(self): return (By.ID, "id_total_seats")
+    def total_seats_field(self):
+        return (By.ID, "id_total_seats")
+
     @property
-    def save_btn(self): return (By.CSS_SELECTOR, "button[type='submit']")
+    def save_btn(self):
+        return (By.CSS_SELECTOR, "button[type='submit']")
+
     @property
-    def search_query(self): return (By.ID, "id_query")
+    def search_query(self):
+        return (By.ID, "id_query")
+
     @property
-    def search_type(self): return (By.ID, "id_search_type")
+    def search_type(self):
+        return (By.ID, "id_search_type")
+
+    # ✅ ИСПРАВЛЕНО: Ищем кнопку ТОЛЬКО внутри формы поиска
     @property
-    def search_btn(self): return (By.CSS_SELECTOR, "button[type='submit']")
+    def search_btn(self):
+        return (By.CSS_SELECTOR, "form.search-form button[type='submit']")
+
     @property
-    def flight_rows(self): return (By.CSS_SELECTOR, ".flight-card-single, .flight-row")
+    def flight_rows(self):
+        return (By.CSS_SELECTOR, ".flight-card-single, .flight-row")
+
     @property
-    def nav_flights_link(self): return (By.CSS_SELECTOR, "a[href*='/flights']")
+    def nav_flights_link(self):
+        return (By.CSS_SELECTOR, "a[href*='/flights']")
 
     def go_to_create(self):
         self.open("/flights/create/")
         return self
 
-    def create_flight(self, number: str, date: str, time: str, seats: int):
+    def create_flight(self, number: str, date: str, time: str, seats: int, airline_code: str = None):
         self.go_to_create()
 
-        # ✅ Ждём, пока TomSelect полностью инициализируется
         self.wait.until(lambda d: d.execute_script(
             "return document.getElementById('id_airline')?.tomselect !== undefined"
         ))
 
-        # Номер рейса
         self.input_text(self.flight_number_field, number)
 
-        # ✅ Функция выбора значения в TomSelect с retry
+        def select_tomselect_by_code(select_id, code):
+            script = f"""
+                var ts = document.getElementById('{select_id}').tomselect;
+                if (!ts) return false;
+                for (var key in ts.options) {{
+                    if (ts.options[key].text.includes('{code}')) {{
+                        ts.setValue(key);
+                        return true;
+                    }}
+                }}
+                return false;
+            """
+            for _ in range(20):
+                if self.driver.execute_script(script):
+                    return True
+                time.sleep(0.3)
+            raise Exception(f"TomSelect '{select_id}' не содержит опции с '{code}'")
+
         def select_tomselect(select_id, prefer_index=0):
             script = f"""
                 var ts = document.getElementById('{select_id}').tomselect;
@@ -53,19 +94,21 @@ class FlightPage(BasePage):
                 ts.setValue(keys[idx]);
                 return true;
             """
-            # Retry до 10 раз, пока не получится
             for _ in range(20):
                 if self.driver.execute_script(script):
                     return True
-                import time;
                 time.sleep(0.3)
             raise Exception(f"TomSelect '{select_id}' не содержит опций")
 
-        select_tomselect('id_airline', 0)
-        select_tomselect('id_departure_airport', 0)
-        select_tomselect('id_arrival_airport', 1)  # другой аэропорт
+        # ✅ Если передан код авиакомпании, ищем её по названию, иначе берем первую
+        if airline_code:
+            select_tomselect_by_code('id_airline', airline_code)
+        else:
+            select_tomselect('id_airline', 0)
 
-        # ✅ Поля date/time устанавливаем через JS (send_keys часто не работает)
+        select_tomselect('id_departure_airport', 0)
+        select_tomselect('id_arrival_airport', 1)
+
         self._set_input_value('id_departure_date', date)
         self._set_input_value('id_departure_time', time)
         self._set_input_value('id_arrival_time', '16:30')
@@ -79,7 +122,6 @@ class FlightPage(BasePage):
         return self
 
     def _set_input_value(self, element_id: str, value: str):
-        """Универсальная установка значения в input (работает для date/time/number)"""
         self.driver.execute_script(f"""
             var el = document.getElementById('{element_id}');
             var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
@@ -107,11 +149,9 @@ class FlightPage(BasePage):
         return self
 
     def delete_flight(self, flight_id: int):
-        # Admin action, typically from detail or list page
         self.open(f"/flights/{flight_id}/")
         delete_btn = (By.CSS_SELECTOR, "button.btn-danger, form[action*='delete'] button[type='submit']")
         self.click(delete_btn)
-        # Handle confirmation form or alert
         try:
             self.driver.switch_to.alert.accept()
         except:

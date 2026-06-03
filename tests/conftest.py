@@ -111,7 +111,7 @@ def random_prefix():
 def valid_flight_data():
     tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
     return {
-        "number": faker.random_number(digits=3),
+        "number": str(random.randint(100, 999)),
         "date": tomorrow,
         "time": "14:30",
         "seats": 150
