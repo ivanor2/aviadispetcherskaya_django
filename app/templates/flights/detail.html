@@ -3,111 +3,131 @@
 
 {% block title %}{{ flight.flight_number }} — Детали рейса{% endblock %}
 
+
+
 {% block content %}
-<!-- Хлебные крошки -->
-<nav class="breadcrumbs">
-    <a href="{% url 'app:index' %}">Главная</a> /
-    <a href="{% url 'app:flight_list' %}">Рейсы</a> /
-    <span>{{ flight.flight_number }}</span>
-</nav>
+<div class="flight-detail-page">
 
-<div class="flight-detail">
-    <!-- Заголовок рейса -->
-    <header class="flight-header">
-        <div class="flight-title">
-            <h1>{{ flight.flight_number }}</h1>
-            <span class="airline-name">{{ flight.airline_name }}</span>
-        </div>
-        <div class="flight-status {% if flight.free_seats == 0 %}sold-out{% elif flight.free_seats < 10 %}low-seats{% else %}available{% endif %}">
+    <!-- Хлебные крошки -->
+    <nav class="breadcrumbs">
+        <a href="{% url 'app:index' %}">Главная</a>
+        <span class="sep">/</span>
+        <a href="{% url 'app:flight_list' %}">Рейсы</a>
+        <span class="sep">/</span>
+        <span>{{ flight.flight_number }}</span>
+    </nav>
+
+    <!-- ── Hero Card ── -->
+    <div class="flight-hero">
+        <div class="flight-hero-top">
+            <div class="flight-hero-title">
+                <h1>{{ flight.flight_number }}</h1>
+                <span class="airline-label">{{ flight.airline_name }}</span>
+            </div>
             {% if flight.free_seats == 0 %}
-                <span class="status-badge">Мест нет</span>
+                <span class="status-badge sold-out">Мест нет</span>
             {% elif flight.free_seats < 10 %}
-                <span class="status-badge">Осталось {{ flight.free_seats }} мест</span>
+                <span class="status-badge low-seats">Мало мест &middot; {{ flight.free_seats }}</span>
             {% else %}
-                <span class="status-badge">В продаже</span>
+                <span class="status-badge available">В продаже</span>
             {% endif %}
         </div>
-    </header>
 
-    <!-- Информация о рейсе -->
-    <section class="flight-info-grid">
-        <div class="info-card">
-            <h3>Отправление</h3>
-            <p class="airport-code">{{ flight.departure_airport.icao_code }}</p>
-            <p class="airport-name">{{ flight.departure_airport.name }}</p>
-            <p class="airport-city">{{ flight.departure_airport.city }}, {{ flight.departure_airport.country }}</p>
-            <p class="datetime">
-                <strong>{{ flight.departure_date|date:"d.m.Y" }}</strong>
-                {{ flight.departure_time|time:"H:i" }}
-            </p>
-        </div>
-
-        <div class="route-connector"></div>
-            <div class="info-card">
-                <h3>Прибытие</h3>
-                <p class="airport-code">{{ flight.arrival_airport.icao_code }}</p>
-                <p class="airport-name" style="font-size: 1.3rem; font-weight: 600; color: #1a1a2e; margin: 8px 0;">
-                    {{ flight.arrival_airport.name }}
-                </p>
-                <p class="airport-city">{{ flight.arrival_airport.city }}, {{ flight.arrival_airport.country }}</p>
-                <p class="datetime">
-                    <strong>{{ flight.departure_date|date:"d.m.Y" }}</strong>
-                </p>
+        <div class="route-strip">
+            <!-- Вылет -->
+            <div class="route-endpoint departure">
+                <div class="endpoint-code">{{ flight.departure_airport.icao_code }}</div>
+                <div class="endpoint-name">{{ flight.departure_airport.name }}</div>
+                <div class="endpoint-city">{{ flight.departure_airport.city }}</div>
+                <div class="endpoint-time">{{ flight.departure_time|time:"H:i" }}</div>
+                <div class="endpoint-date">{{ flight.departure_date|date:"d.m.Y" }}</div>
             </div>
-    </section>
 
-    <!-- Места и действия -->
-    <section class="flight-actions-section">
-        <div class="seats-info">
+            <!-- Стрелка -->
+            <div class="route-arrow-wrap">
+                <div class="route-plane">&rarr;</div>
+                <div class="route-line"></div>
+            </div>
+
+            <!-- Прибытие -->
+            <div class="route-endpoint arrival">
+                <div class="endpoint-code">{{ flight.arrival_airport.icao_code }}</div>
+                <div class="endpoint-name">{{ flight.arrival_airport.name }}</div>
+                <div class="endpoint-city">{{ flight.arrival_airport.city }}</div>
+                {% if flight.arrival_time %}
+                    <div class="endpoint-time">{{ flight.arrival_time|time:"H:i" }}</div>
+                {% endif %}
+                <div class="endpoint-date">{{ flight.departure_date|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Info Cards ── -->
+    <div class="info-cards-row">
+        <div class="info-card-block">
+            <div class="ic-label">Аэропорт вылета</div>
+            <div class="ic-value">{{ flight.departure_airport.name }}</div>
+            <div class="ic-sub">{{ flight.departure_airport.city }}{% if flight.departure_airport.country %}, {{ flight.departure_airport.country }}{% endif %}</div>
+        </div>
+        <div class="info-card-block">
+            <div class="ic-label">Аэропорт прилёта</div>
+            <div class="ic-value">{{ flight.arrival_airport.name }}</div>
+            <div class="ic-sub">{{ flight.arrival_airport.city }}{% if flight.arrival_airport.country %}, {{ flight.arrival_airport.country }}{% endif %}</div>
+        </div>
+    </div>
+
+    <!-- ── Seats ── -->
+    <div class="seats-card">
+        <div class="seats-card-header">
             <h3>Доступность мест</h3>
-            <div class="seats-progress">
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {% widthratio flight.free_seats flight.total_seats 100 %}%"></div>
-                </div>
-                <span class="seats-count">{{ flight.free_seats }} из {{ flight.total_seats }} мест свободно</span>
+            <div class="seats-fraction">
+                Свободно: <span>{{ flight.free_seats }}</span> из {{ flight.total_seats }}
             </div>
         </div>
-
-        <div class="action-buttons">
-            {% if flight.free_seats > 0 and can_manage_bookings %}
-            <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-primary btn-lg"> Продать билет</a>
-            {% endif %}
-            {% if is_admin and flight.id %}
-            <form method="post" action="{% url 'app:flight_delete' flight.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger btn-lg"
-                    onclick="return confirm('Вы уверены, что хотите удалить этот рейс? Это действие нельзя отменить.');">
-                 Удалить рейс
-                </button>
-            </form>
-            {% endif %}
-
-            <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">← Назад к списку</a>
-
+        <div class="progress-track">
+            {% with pct=flight.free_seats|stringformat:"s" %}
+            <div class="progress-fill-bar {% if flight.free_seats == 0 %}critical{% elif flight.free_seats < 10 %}low{% endif %}"
+                 style="width: {% widthratio flight.free_seats flight.total_seats 100 %}%"></div>
+            {% endwith %}
         </div>
-    </section>
+    </div>
 
-    <!-- Пассажиры на рейсе -->
-    <section class="passengers-section">
+    <!-- ── Actions ── -->
+    <div class="actions-card">
+        {% if flight.free_seats > 0 and can_manage_bookings %}
+        <a href="{% url 'app:booking_create' flight.id %}" class="btn btn-primary btn-lg">Продать билет</a>
+        {% endif %}
+
+        {% if is_admin and flight.id %}
+        <form method="post" action="{% url 'app:flight_delete' flight.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-lg"
+                onclick="return confirm('Вы уверены, что хотите удалить этот рейс? Это действие нельзя отменить.');">
+                Удалить рейс
+            </button>
+        </form>
+        {% endif %}
+
+        <a href="{% url 'app:flight_list' %}" class="btn btn-secondary">← Назад к списку</a>
+    </div>
+
+    <!-- ── Passengers ── -->
+    <div class="passengers-card">
         <h3>Пассажиры на рейсе</h3>
 
         {% if is_guest %}
-        <p class="empty-state">Нет доступа к информации о пассажирах</p>
+            <div class="empty-state-box">
+                Нет доступа к информации о пассажирах
+            </div>
         {% elif passengers %}
-        <div class="cards-grid-single">
             {% for booking in passengers %}
-            <div class="passenger-card-single">
-                <div class="passenger-card-single-content">
-                    <div class="passenger-card-single-main">
-                        <span class="passenger-name"><strong>{{ booking.booking_code }}</strong></span>
-                    </div>
-                    <div class="passenger-details">
-                        <span class="detail-item">{{ booking.passenger.full_name }}</span>
-                        <span class="detail-item">{{ booking.passenger.passport_number }}</span>
-                        <span class="detail-item">{{ booking.booked_at|date:"d.m.Y H:i" }}</span>
-                    </div>
+            <div class="pax-row">
+                <div class="pax-info">
+                    <span class="pax-code">{{ booking.booking_code }}</span>
+                    <span class="pax-name">{{ booking.passenger.full_name }}</span>
+                    <span class="pax-meta">{{ booking.passenger.passport_number }} · {{ booking.booked_at|date:"d.m.Y H:i" }}</span>
                 </div>
-                <div class="passenger-card-single-actions">
+                <div class="pax-actions">
                     {% if can_cancel_booking %}
                     <form method="post" action="{% url 'app:booking_cancel' booking.id %}"
                           onsubmit="return confirm('Отменить бронирование? Места вернутся в продажу.');"
@@ -117,6 +137,7 @@
                         <button type="submit" class="btn btn-sm btn-warning">Возврат</button>
                     </form>
                     {% endif %}
+
                     <a href="{% url 'app:booking_ticket_pdf' booking.id %}" class="btn btn-sm btn-secondary" target="_blank" title="Скачать PDF">PDF</a>
 
                     {% if user_role == 'admin' %}
@@ -131,11 +152,12 @@
                 </div>
             </div>
             {% endfor %}
-        </div>
         {% else %}
-        <p class="empty-state">На этот рейс ещё не куплено ни одного билета</p>
+            <div class="empty-state-box">
+                На этот рейс ещё не куплено ни одного билета
+            </div>
         {% endif %}
-    </section>
+    </div>
 
 </div>
 {% endblock %}

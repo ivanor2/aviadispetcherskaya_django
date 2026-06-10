@@ -5,6 +5,11 @@ faker = Faker("ru_RU")
 
 
 def test_successful_registration_and_login(auth_page):
+    """Регистрирует нового пользователя и проверяет успешный вход.
+
+    После регистрации ожидает сообщение об успехе, затем выполняет
+    вход и убеждается, что панель управления отображается.
+    """
     username = f"test_{faker.user_name()}"
     password = "TestPass123!"
 
@@ -18,11 +23,15 @@ def test_successful_registration_and_login(auth_page):
 
 
 def test_logout_redirects_to_login(auth_page):
+    """Проверяет, что выход из системы перенаправляет на страницу входа.
+
+    Регистрирует пользователя, выполняет вход и нажимает «Выход»,
+    затем убеждается, что URL содержит /login/.
+    """
     username = f"test_{faker.user_name()}"
     password = "TestPass123!"
     auth_page.register(username, password)
 
-    # ✅ Ждем, пока регистрация завершится и нас перекинет на /login/
     auth_page.wait.until(lambda d: "/login/" in d.current_url)
 
     auth_page.login(username, password)
@@ -31,6 +40,11 @@ def test_logout_redirects_to_login(auth_page):
 
 
 def test_login_with_wrong_password(auth_page):
+    """Проверяет отображение ошибки при неверном пароле.
+
+    Выполняет вход с несуществующим пользователем и убеждается,
+    что появляется сообщение об ошибке аутентификации.
+    """
     auth_page.login("nonexistent_user", "WrongPass!", expect_success=False)
     msg, status = auth_page.get_alert_message()
     assert status == "error", "При неверном пароле не появилась ошибка"

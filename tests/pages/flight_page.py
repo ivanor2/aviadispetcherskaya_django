@@ -40,7 +40,6 @@ class FlightPage(BasePage):
     def search_type(self):
         return (By.ID, "id_search_type")
 
-    # ✅ ИСПРАВЛЕНО: Ищем кнопку ТОЛЬКО внутри формы поиска
     @property
     def search_btn(self):
         return (By.CSS_SELECTOR, "form.search-form button[type='submit']")
@@ -100,7 +99,6 @@ class FlightPage(BasePage):
                 time.sleep(0.3)
             raise Exception(f"TomSelect '{select_id}' не содержит опций")
 
-        # ✅ Если передан код авиакомпании, ищем её по названию, иначе берем первую
         if airline_code:
             select_tomselect_by_code('id_airline', airline_code)
         else:
@@ -138,10 +136,26 @@ class FlightPage(BasePage):
         self.click(self.search_btn)
         return self
 
+    def click_book_button(self, flight_number: str):
+        """Находит карточку рейса по номеру и кликает кнопку бронирования.
+
+        Предполагается, что перед вызовом уже выполнен search_flight(),
+        а страница отображает результаты поиска.
+        """
+        flight_card_locator = (
+            By.XPATH,
+            f"//article[contains(@class, 'flight-card-single') and contains(., '{flight_number}')]"
+        )
+        flight_card = self.find(flight_card_locator)
+        book_btn = flight_card.find_element(By.CSS_SELECTOR, "a[href*='/bookings/create/']")
+        book_btn.click()
+        self.wait.until(lambda d: "/bookings/create/" in d.current_url)
+        return self
+
     def get_flight_count(self) -> int:
         try:
             return len(self.find_all(self.flight_rows))
-        except:
+        except Exception:
             return 0
 
     def view_flight_details(self, flight_id: int):
@@ -154,6 +168,6 @@ class FlightPage(BasePage):
         self.click(delete_btn)
         try:
             self.driver.switch_to.alert.accept()
-        except:
+        except Exception:
             pass
-        return self
+        return self

@@ -1,6 +1,7 @@
 from .base_page import BasePage
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
 
 
 class AirportPage(BasePage):
@@ -36,23 +37,33 @@ class AirportPage(BasePage):
         self.wait_for_url("/airports/")
         return self
 
-    def edit_airport(self, icao: str, new_name: str):
+    def _find_card_across_pages(self, icao: str):
+        """Ищет карточку аэропорта по ICAO на всех страницах списка."""
         self.go_to_list()
-        # Ждем появления карточек
-        self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, ".airport-card-single")))
+        while True:
+            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, ".airport-card-single")))
+            cards = self.find_all((By.CSS_SELECTOR, ".airport-card-single"))
+            for card in cards:
+                if icao in card.text:
+                    return card
 
-        # Ищем нужную карточку в цикле
-        cards = self.find_all((By.CSS_SELECTOR, ".airport-card-single"))
-        target_card = None
-        for card in cards:
-            if icao in card.text:
-                target_card = card
-                break
+            # Ищем кнопку "Вперёд"
+            try:
+                next_btn = self.driver.find_element(
+                    By.XPATH, "//a[contains(@href,'?page=') and (contains(.,'Вперёд') or contains(.,'вперёд') or contains(.,'Next'))]"
+                )
+                next_btn.click()
+                self.wait.until(EC.staleness_of(cards[0]))
+            except NoSuchElementException:
+                # Больше страниц нет
+                return None
 
+    def edit_airport(self, icao: str, new_name: str):
+        target_card = self._find_card_across_pages(icao)
         if not target_card:
             raise Exception(f"Карточка аэропорта с ICAO {icao} не найдена")
 
-        # Кликаем кнопку "Изменить" ВНУТРИ найденной карточки
+        # Кликаем кнопку «Изменить» внутри найденной карточки
         edit_btn = target_card.find_element(By.CSS_SELECTOR, "a[href*='/edit/']")
         self.wait.until(EC.element_to_be_clickable(edit_btn)).click()
 
@@ -62,16 +73,20 @@ class AirportPage(BasePage):
         return self
 
     def delete_airport(self, icao: str):
-        self.go_to_list()
-        cards = self.find_all((By.CSS_SELECTOR, ".airport-card-single, table tbody tr"))
-        for card in cards:
-            if icao in card.text:
-                delete_btn = card.find_element(By.CSS_SELECTOR,
-                                               "button.btn-danger, form[action*='delete'] button[type='submit']")
-                delete_btn.click()
-                break
+        target_card = self._find_card_across_pages(icao)
+        if not target_card:
+            return self
+
+        try:
+            delete_btn = target_card.find_element(
+                By.CSS_SELECTOR, "button.btn-danger, form[action*='delete'] button[type='submit']"
+            )
+            delete_btn.click()
+        except NoSuchElementException:
+            return self
+
         try:
             self.driver.switch_to.alert.accept()
-        except:
+        except Exception:
             pass
-        return self
+        return self

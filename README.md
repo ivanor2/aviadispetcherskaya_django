@@ -69,7 +69,7 @@
 
 3. **Установите зависимости:**
    ```bash
-   pip install django requests python-decouple
+   pip install -r requirements.txt
    ```
 
 4. **Настройте переменные окружения:**

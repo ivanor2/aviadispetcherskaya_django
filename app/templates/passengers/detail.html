@@ -46,9 +46,11 @@
                 <tr>
                     <th>Код бронирования</th>
                     <th>Рейс</th>
-                    <th>Место</th>
                     <th>Дата оформления</th>
-                    <th>Статус</th>
+                    <th>Сумма</th>
+                    <th>Класс</th>
+                    <th>Место</th>
+                    <th>Багаж</th>
                 </tr>
             </thead>
             <tbody>
@@ -63,7 +65,6 @@
                         {% endif %}
                      </td>
                      <td>{{ b.created_at|date:"d.m.Y H:i" }}</td>
-                     <!-- НОВЫЕ ДАННЫЕ -->
                      <td>{{ b.final_price|floatformat:2 }} ₽</td>
                      <td>{{ b.class_type|upper|default:"ECONOMY" }}</td>
                      <td>{{ b.seat|default:"—" }}</td>

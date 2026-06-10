@@ -5,21 +5,21 @@ import time
 
 class BookingPage(BasePage):
     @property
-    def submit_btn(self): return (By.CSS_SELECTOR, "button[type='submit']")
+    def submit_btn(self):
+        return (By.CSS_SELECTOR, "button[type='submit']")
 
     def create_booking(self, search_text: str, class_type: str = "economy"):
-        # ✅ ВАЖНО: Мы УЖЕ на странице /bookings/create/<id>/ после клика в тесте.
-        # Не делаем self.open(), чтобы не потерять реальный ID рейса и не уйти на 404.
+        """Заполняет форму бронирования на уже открытой странице /bookings/create/<id>/.
 
-        # Ждем, пока форма и селекты загрузятся
+        Выбирает пассажира по тексту search_text через TomSelect (или нативный select),
+        устанавливает класс обслуживания и отправляет форму.
+        """
         self.wait.until(lambda d: "/bookings/create/" in d.current_url)
         self.wait.until(lambda d: d.execute_script(
             "return document.querySelector('select[name=\"passenger_ids\"]') !== null;"
         ))
-        time.sleep(1.5)  # Даем время TomSelect полностью инициализироваться
+        time.sleep(1.5)
 
-        # 1. Выбор пассажира
-        # ✅ ИСПОЛЬЗУЕМ ОРИГИНАЛЬНЫЙ КЛЮЧ из ts.options, чтобы избежать проблем с типами (str vs int)
         passenger_script = f"""
         (function() {{
             var selectEl = document.querySelector('select[name="passenger_ids"]');
@@ -30,7 +30,7 @@ class BookingPage(BasePage):
                 var targetKey = null;
                 for (var key in ts.options) {{
                     if (ts.options[key].text.includes('{search_text}')) {{
-                        targetKey = key; // Сохраняем оригинальный ключ (число или строка)
+                        targetKey = key;
                         break;
                     }}
                 }}
@@ -40,7 +40,6 @@ class BookingPage(BasePage):
                 }}
                 return 'ERROR: passenger not found in TomSelect';
             }} else {{
-                // Fallback для нативного select
                 for (var i = 0; i < selectEl.options.length; i++) {{
                     if (selectEl.options[i].text.includes('{search_text}')) {{
                         selectEl.selectedIndex = i;
@@ -52,10 +51,8 @@ class BookingPage(BasePage):
             }}
         }})();
         """
-        res_p = self.driver.execute_script(passenger_script)
-        print(f"🔹 [BookingPage] Выбор пассажира: {res_p}")
+        self.driver.execute_script(passenger_script)
 
-        # 2. Выбор класса обслуживания
         class_script = f"""
         (function() {{
             var selectEl = document.querySelector('select[name="class_type"]');
@@ -86,10 +83,8 @@ class BookingPage(BasePage):
             return 'ERROR: class not found';
         }})();
         """
-        res_c = self.driver.execute_script(class_script)
-        print(f"🔹 [BookingPage] Выбор класса: {res_c}")
+        self.driver.execute_script(class_script)
 
-        # Небольшая пауза перед сабмитом, чтобы UI успел отрисоваться
         time.sleep(0.5)
         self.click(self.submit_btn)
-        return self
+        return self

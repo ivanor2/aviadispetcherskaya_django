@@ -1,5 +1,7 @@
 from .base_page import BasePage
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
+
 
 class PassengerPage(BasePage):
     @property
@@ -16,6 +18,12 @@ class PassengerPage(BasePage):
     def submit_btn(self): return (By.CSS_SELECTOR, "button[type='submit']")
     @property
     def nav_passengers_link(self): return (By.CSS_SELECTOR, "a[href*='/passengers']")
+    @property
+    def search_input(self): return (By.ID, "query")
+    @property
+    def search_type_select(self): return (By.ID, "search_type")
+    @property
+    def search_btn(self): return (By.CSS_SELECTOR, "button[type='submit']")
 
     def go_to_create(self):
         self.open("/passengers/create/")
@@ -34,20 +42,15 @@ class PassengerPage(BasePage):
 
     def search_passenger(self, query: str):
         self.open("/passengers/")
-        search_input = (By.ID, "query")
-        search_type = (By.ID, "search_type")
-        search_btn = (By.CSS_SELECTOR, "button[type='submit']")
-        
-        from selenium.webdriver.support.ui import Select
-        Select(self.find(search_type)).select_by_value("passport")
-        self.input_text(search_input, query)
-        self.click(search_btn)
+        Select(self.find(self.search_type_select)).select_by_value("passport")
+        self.input_text(self.search_input, query)
+        self.click(self.search_btn)
         return self
 
     def get_passenger_count(self) -> int:
         try:
             return len(self.find_all((By.CSS_SELECTOR, ".passenger-card-single, .passenger-row, table tbody tr")))
-        except:
+        except Exception:
             return 0
 
     def view_passenger_details(self, pk: int):

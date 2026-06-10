@@ -102,6 +102,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .btn-success:hover { background: #388e3c; }
 .btn-danger { background: #dc3545; color: #fff; }
 .btn-danger:hover { background: #c62828; }
+.btn-warning { background: #ff9800; color: #fff; }
+.btn-warning:hover { background: #e65100; }
 .btn-block { width: 100%; justify-content: center; }
 .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
 .btn-lg { padding: 1rem 2rem; font-size: 1.125rem; }
@@ -261,4 +263,79 @@ tr:hover { background: #f8f9fa; }
     .table-responsive td::before {
         font-size: 0.85rem;
     }
+}
+
+/* ── Flight Detail Page ── */
+.flight-detail-page { max-width: 900px; margin: 0 auto; }
+
+.breadcrumbs { font-size: 0.875rem; color: #888; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.4rem; }
+.breadcrumbs a { color: #4fc3f7; text-decoration: none; }
+.breadcrumbs a:hover { text-decoration: underline; }
+.breadcrumbs .sep { color: #ccc; }
+
+.flight-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    border-radius: 20px; padding: 2.5rem 2.5rem 2rem; color: #fff;
+    position: relative; overflow: hidden; margin-bottom: 1.5rem;
+    box-shadow: 0 8px 32px rgba(26,26,46,0.25);
+}
+.flight-hero-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; }
+.flight-hero-title h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: 1px; line-height: 1; margin-bottom: 0.35rem; }
+.flight-hero-title .airline-label { font-size: 0.95rem; color: rgba(255,255,255,0.6); font-weight: 400; }
+
+.status-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 1.1rem; border-radius: 50px; font-size: 0.875rem; font-weight: 600; }
+.status-badge.available { background: rgba(76,175,80,0.18); color: #81c784; border: 1px solid rgba(76,175,80,0.35); }
+.status-badge.low-seats  { background: rgba(255,152,0,0.18);  color: #ffb74d; border: 1px solid rgba(255,152,0,0.35); }
+.status-badge.sold-out   { background: rgba(220,53,69,0.18);   color: #ef9a9a; border: 1px solid rgba(220,53,69,0.35); }
+
+.route-strip { display: flex; align-items: center; justify-content: space-between; }
+.route-endpoint { display: flex; flex-direction: column; gap: 0.25rem; }
+.route-endpoint.arrival { text-align: right; }
+.endpoint-code { font-size: 3rem; font-weight: 900; line-height: 1; letter-spacing: 2px; }
+.endpoint-name { font-size: 0.8rem; color: rgba(255,255,255,0.55); max-width: 200px; line-height: 1.3; }
+.endpoint-city { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+.endpoint-time { font-size: 1.1rem; font-weight: 600; color: #4fc3f7; margin-top: 0.25rem; }
+.endpoint-date { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+
+.route-arrow-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0 1rem; }
+.route-line { width: 100%; height: 2px; background: linear-gradient(90deg, rgba(79,195,247,0.2), rgba(79,195,247,0.8), rgba(79,195,247,0.2)); border-radius: 2px; }
+.route-plane { font-size: 1.6rem; color: #4fc3f7; }
+
+.info-cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.info-card-block { background: #fff; border-radius: 14px; padding: 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); transition: transform 0.2s, box-shadow 0.2s; }
+.info-card-block:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.11); }
+.info-card-block .ic-label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: #aaa; margin-bottom: 0.75rem; }
+.info-card-block .ic-value { font-size: 1.05rem; font-weight: 600; color: #1a1a2e; }
+.info-card-block .ic-sub { font-size: 0.85rem; color: #888; margin-top: 0.25rem; }
+
+.seats-card { background: #fff; border-radius: 14px; padding: 1.5rem 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 1.5rem; }
+.seats-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.seats-card-header h3 { font-size: 1rem; font-weight: 700; color: #1a1a2e; }
+.seats-fraction { font-size: 0.95rem; color: #555; }
+.seats-fraction span { font-weight: 700; color: #1a1a2e; font-size: 1.1rem; }
+.progress-track { width: 100%; height: 10px; background: #f0f0f0; border-radius: 99px; overflow: hidden; }
+.progress-fill-bar { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #4fc3f7, #1a78c2); }
+.progress-fill-bar.low      { background: linear-gradient(90deg, #ffb74d, #f57c00); }
+.progress-fill-bar.critical { background: linear-gradient(90deg, #ef5350, #b71c1c); }
+
+.actions-card { background: #fff; border-radius: 14px; padding: 1.5rem 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+
+.passengers-card { background: #fff; border-radius: 14px; padding: 1.5rem 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+.passengers-card h3 { font-size: 1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 1.25rem; }
+.pax-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 0.85rem 1rem; border-radius: 10px; transition: background 0.15s; border-bottom: 1px solid #f5f5f5; }
+.pax-row:last-child { border-bottom: none; }
+.pax-row:hover { background: #f8faff; }
+.pax-info { display: flex; flex-direction: column; gap: 0.2rem; }
+.pax-code { font-weight: 700; font-size: 0.95rem; color: #1a1a2e; font-family: 'Courier New', monospace; background: #f0f4ff; padding: 0.1rem 0.5rem; border-radius: 4px; display: inline-block; }
+.pax-name { font-size: 0.9rem; color: #444; }
+.pax-meta { font-size: 0.8rem; color: #aaa; }
+.pax-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.empty-state-box { text-align: center; padding: 2.5rem 1rem; color: #aaa; }
+
+@media (max-width: 600px) {
+    .flight-hero { padding: 1.5rem 1.25rem; }
+    .endpoint-code { font-size: 2rem; }
+    .info-cards-row { grid-template-columns: 1fr; }
+    .route-arrow-wrap { padding: 0 0.5rem; }
+    .endpoint-name { max-width: 120px; }
 }
