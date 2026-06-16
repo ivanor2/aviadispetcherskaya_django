@@ -1,9 +1,20 @@
 # django_app/settings.py
+import sys
 from pathlib import Path
 from decouple import config
 
-BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+if getattr(sys, 'frozen', False):
+    # Если запущено как скомпилированный exe (onefile)
+    # BASE_DIR указывает на временную папку PyInstaller, где лежат шаблоны и статика
+    BASE_DIR = Path(sys._MEIPASS)
+    # WORKING_DIR указывает на папку, где физически лежит .exe файл (для .env и записи данных)
+    WORKING_DIR = Path(sys.executable).parent
+else:
+    # Если запущено как обычный Python-скрипт
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    WORKING_DIR = BASE_DIR
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me')
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = ['*']
@@ -70,7 +81,7 @@ DATABASES = {
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'app' / 'assets']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = WORKING_DIR / 'staticfiles'
 
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'

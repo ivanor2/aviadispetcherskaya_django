@@ -437,3 +437,8 @@ pytest tests -v
 ```bash
 TEST_USERNAME=my_admin TEST_PASSWORD=MyStrongPassword123! pytest tests -v
 ```
+### Сборка проекта в exe
+
+```bash
+pyinstaller --clean --noconfirm django_packaging.spec
+```

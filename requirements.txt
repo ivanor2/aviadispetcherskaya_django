@@ -8,3 +8,4 @@ pytest-django>=4.5.0
 Faker>=20.0.0
 webdriver-manager>=4.0.0
 reportlab>=4.0.0
+pynstaller
